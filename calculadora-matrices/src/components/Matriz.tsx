@@ -1,18 +1,15 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Minus, Plus, Trash2, Calculator } from "lucide-react"
 
 export default function Matriz() {
   const [size, setSize] = useState(2)
-  const [matrix, setMatrix] = useState(Array(size).fill(Array(size).fill("")))
-  const [results, setResults] = useState(Array(size).fill("aaa"))
-
-  console.log(matrix);
-  console.log(results);
+  const [matrix, setMatrix] = useState(Array(size).fill(Array(size).fill(0)))
+  const [determinant, setDeterminant] = useState(0)
 
   useEffect(() => {
-    setMatrix(Array.from({ length: size }, () => Array(size).fill("")))
+    setMatrix(Array.from({ length: size }, () => Array(size).fill(0)))
   }, [size]) 
 
   const increaseSize = () => {
@@ -39,12 +36,37 @@ export default function Matriz() {
   
 
   const clearMatrix = () => {
-    setMatrix(Array(size).fill(Array(size).fill("")))
+    setMatrix(Array(size).fill(Array(size).fill(0)))
   }
+
+  const calculateDeterminant = useCallback((mat) => {
+    // Verificamos que 'mat' sea una matriz válida antes de continuar
+    if (!Array.isArray(mat) || mat.length === 0 || !Array.isArray(mat[0])) {
+      console.error("Matriz no válida:", mat);
+      return 0; // O algún valor adecuado en caso de que la matriz no sea válida
+    }
+  
+    if (mat.length === 1) {
+      return mat[0][0]; // Caso base: determinante de una matriz 1x1
+    }
+    let det = 0;
+    for (let i = 0; i < mat[0].length; i++) {
+      const subMatrix = mat.slice(1).map(row => row.filter((_, colIndex) => colIndex !== i)); // Submatriz excluyendo fila 0 y columna i
+      det += (i % 2 === 0 ? 1 : -1) * mat[0][i] * calculateDeterminant(subMatrix);
+    }
+    console.log(det);  // Muestra el determinante en consola
+    
+    return det;
+  }, []);
+  
+
+  useEffect(() => {
+    setDeterminant(calculateDeterminant(matrix));
+  }, [matrix, calculateDeterminant]);
 
   return (
     <div className="p-6 max-w-2xl mx-auto bg-white rounded-lg shadow-lg">
-      <h2 className="text-3xl font-bold mb-4 text-center text-gray-800">Calculadora de matrices cubicas</h2>
+      <h2 className="text-3xl font-bold mb-4 text-center text-gray-800">{determinant === 0 ? "Calculadora de matrices" : determinant}</h2>
       <p className="text-gray-600 mb-6 text-center">Ajusta el tamaño de la matriz y escribe los valores de las celdas.</p>
 
       <div className="mb-6 flex items-center justify-between">
@@ -72,6 +94,7 @@ export default function Matriz() {
         </Button>
       </div>
 
+      <div className="flex justify-center gap-6">
       <div className="mb-6 overflow-x-auto flex justify-center align-middle">
         <div className="inline-block bg-gray-50 border border-gray-300 rounded-lg p-4 transition-all duration-300 ease-in-out">
           {matrix.map((row, rowIndex) => (
@@ -90,20 +113,11 @@ export default function Matriz() {
                   </div>
                 </div>
               ))}
-              <div className="flex justify-center">
-                <div className="text-xs text-gray-500 text-center">
-                  =&nbsp;
-                </div>
-                <Input
-                type="number"
-                value={results[rowIndex]}
-                className="w-16 h-16 text-center text-lg font-medium bg-white border-2 border-gray-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                aria-label={`Result at row ${rowIndex + 1}`}
-                />
-              </div>
             </div>
           ))}
         </div>
+      </div>
+
       </div>
 
       <div className="flex align-middle justify-evenly">
@@ -118,6 +132,7 @@ export default function Matriz() {
 
         <Button
           variant="outline"
+          onClick={() => calculateDeterminant(matrix)}
           className="px-4 py-2 text-blue-600 border-blue-600 hover:bg-blue-50 cursor-pointer"
         >
           <Calculator className="w-4 h-4 mr-2" />
