@@ -1,50 +1,86 @@
-# React + TypeScript + Vite
+# Calculadora de Matrices
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Descripción del Proyecto
 
-Currently, two official plugins are available:
+Esta aplicación web es una calculadora de matrices que permite a los usuarios calcular el determinante de matrices cuadradas utilizando el método de cofactores. La aplicación está diseñada para ser intuitiva, responsiva y educativa, mostrando los pasos detallados del cálculo para ayudar a comprender el proceso.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Características
 
-## Expanding the ESLint configuration
+- **Interfaz intuitiva**: Permite crear matrices de diferentes tamaños (2x2 a 5x5)
+- **Cálculo de determinantes**: Implementa el método de cofactores para calcular determinantes
+- **Visualización de pasos**: Muestra el proceso paso a paso del cálculo
+- **Diseño responsivo**: Se adapta a diferentes tamaños de pantalla
+- **Animaciones suaves**: Proporciona una experiencia de usuario agradable
+- **Entrada de datos flexible**: Permite ingresar valores numéricos en las celdas de la matriz
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+## Tecnologías Utilizadas
 
-- Configure the top-level `parserOptions` property like this:
+- **React**: Biblioteca para construir interfaces de usuario
+- **TypeScript**: Lenguaje de programación tipado
+- **Vite**: Herramienta de construcción y desarrollo
+- **Tailwind CSS**: Framework de CSS para estilos
+- **Lucide React**: Biblioteca de iconos
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Requisitos Previos
+
+- Node.js (versión 18 o superior)
+- npm o yarn
+
+## Instalación
+
+1. Clona este repositorio:
+   ```bash
+   git clone <url-del-repositorio>
+   cd calculadora-matrices
+   ```
+
+2. Instala las dependencias:
+   ```bash
+   npm install
+   # o
+   yarn
+   ```
+
+## Ejecución
+
+Para iniciar la aplicación en modo desarrollo:
+
+```bash
+npm run dev
+# o
+yarn dev
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+La aplicación estará disponible en `http://localhost:5173` (o en el puerto que Vite indique en la consola).
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## Construcción para Producción
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+Para crear una versión optimizada para producción:
+
+```bash
+npm run build
+# o
+yarn build
 ```
+
+Los archivos generados estarán en la carpeta `dist`.
+
+## Uso de la Aplicación
+
+1. Ajusta el tamaño de la matriz usando los botones "+" y "-"
+2. Ingresa los valores numéricos en las celdas de la matriz
+3. Haz clic en "Calcular" para obtener el determinante
+4. Expande la sección "Mostrar pasos" para ver el proceso detallado del cálculo
+
+## Estructura del Proyecto
+
+- `src/components/`: Contiene los componentes de la aplicación
+  - `Matriz.tsx`: Componente principal que gestiona la lógica de la aplicación
+  - `MatrixSizeControls.tsx`: Controla el tamaño de la matriz
+  - `MatrixInput.tsx`: Maneja la entrada de datos en la matriz
+  - `MatrixActions.tsx`: Proporciona botones de acción (calcular, limpiar)
+  - `DeterminantResult.tsx`: Muestra el resultado y los pasos del cálculo
+
+## Licencia
+
+Este proyecto está bajo la Licencia MIT.
