@@ -80,7 +80,3 @@ Los archivos generados estarán en la carpeta `dist`.
   - `MatrixInput.tsx`: Maneja la entrada de datos en la matriz
   - `MatrixActions.tsx`: Proporciona botones de acción (calcular, limpiar)
   - `DeterminantResult.tsx`: Muestra el resultado y los pasos del cálculo
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT.
