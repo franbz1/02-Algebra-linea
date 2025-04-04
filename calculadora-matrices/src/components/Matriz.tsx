@@ -1,16 +1,16 @@
-import { useState, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Minus, Plus, Trash2, Calculator } from "lucide-react"
+import { useState, useCallback, useEffect } from "react"
+import { MatrixSizeControls } from "./MatrixSizeControls"
+import { MatrixInput } from "./MatrixInput"
+import { MatrixActions } from "./MatrixActions"
+import { DeterminantResult } from "./DeterminantResult"
 
 export default function Matriz() {
   const [size, setSize] = useState(2)
-  const [matrix, setMatrix] = useState(Array(size).fill(Array(size).fill(0)))
-  const [determinant, setDeterminant] = useState(0)
-
-  useEffect(() => {
-    setMatrix(Array.from({ length: size }, () => Array(size).fill(0)))
-  }, [size]) 
+  const [matrix, setMatrix] = useState<string[][]>(Array(size).fill(Array(size).fill("")))
+  const [matrixCalculated, setMatrixCalculated] = useState<number[][] | null>(null)
+  const [determinant, setDeterminant] = useState<number | null>(null)
+  const [calculationSteps, setCalculationSteps] = useState<string[]>([])
+  const [showResult, setShowResult] = useState(false)
 
   const increaseSize = () => {
     if (size < 5) {
@@ -28,116 +28,142 @@ export default function Matriz() {
     setMatrix(prevMatrix =>
       prevMatrix.map((row, rIndex) =>
         rIndex === rowIndex
-          ? row.map((cell: number, cIndex: number) => (cIndex === colIndex ? value : cell))
+          ? row.map((cell: string, cIndex: number) => (cIndex === colIndex ? value : cell))
           : row
       )
     )
   }
-  
 
   const clearMatrix = () => {
-    setMatrix(Array(size).fill(Array(size).fill(0)))
+    setMatrix(Array(size).fill(Array(size).fill("")))
+    setDeterminant(null)
+    setCalculationSteps([])
+    setShowResult(false)
   }
 
-  const calculateDeterminant = useCallback((mat) => {
-    // Verificamos que 'mat' sea una matriz válida antes de continuar
-    if (!Array.isArray(mat) || mat.length === 0 || !Array.isArray(mat[0])) {
-      console.error("Matriz no válida:", mat);
-      return 0; // O algún valor adecuado en caso de que la matriz no sea válida
-    }
-  
-    if (mat.length === 1) {
-      return mat[0][0]; // Caso base: determinante de una matriz 1x1
-    }
-    let det = 0;
-    for (let i = 0; i < mat[0].length; i++) {
-      const subMatrix = mat.slice(1).map(row => row.filter((_, colIndex) => colIndex !== i)); // Submatriz excluyendo fila 0 y columna i
-      det += (i % 2 === 0 ? 1 : -1) * mat[0][i] * calculateDeterminant(subMatrix);
-    }
-    console.log(det);  // Muestra el determinante en consola
+  // Función para obtener el menor de una matriz (submatriz)
+  const getMinor = (mat: number[][], row: number, col: number): number[][] => {
+    const n = mat.length;
+    const minor: number[][] = [];
     
-    return det;
+    for (let i = 0; i < n; i++) {
+      if (i !== row) {
+        const rowArray: number[] = [];
+        for (let j = 0; j < n; j++) {
+          if (j !== col) {
+            rowArray.push(mat[i][j]);
+          }
+        }
+        minor.push(rowArray);
+      }
+    }
+    
+    return minor;
+  }
+
+  // Función para calcular el determinante de una matriz con pasos
+  const calculateDeterminantWithSteps = useCallback((mat: number[][], steps: string[] = []): { determinant: number, steps: string[] } => {
+    const n = mat.length;
+    
+    // Verificar que la matriz sea cuadrada
+    if (n === 0 || mat.some(row => row.length !== n)) {
+      steps.push("La matriz no es cuadrada, no se puede calcular el determinante.");
+      return { determinant: 0, steps };
+    }
+    
+    // Caso base: matriz 1x1
+    if (n === 1) {
+      steps.push(`Para una matriz 1x1, el determinante es el único elemento: det = ${mat[0][0]}`);
+      return { determinant: mat[0][0], steps };
+    }
+    
+    // Caso base: matriz 2x2
+    if (n === 2) {
+      const det = mat[0][0] * mat[1][1] - mat[0][1] * mat[1][0];
+      steps.push(`Para una matriz 2x2, el determinante se calcula como: det = (${mat[0][0]} × ${mat[1][1]}) - (${mat[0][1]} × ${mat[1][0]}) = ${det}`);
+      return { determinant: det, steps };
+    }
+    
+    // Método de cofactores: expandir por la primera fila
+    let det = 0;
+    steps.push(`Expandimos por la primera fila usando el método de cofactores:`);
+    
+    for (let j = 0; j < n; j++) {
+      // Obtener el menor (submatriz)
+      const minor = getMinor(mat, 0, j);
+      
+      // Calcular el cofactor: (-1)^(i+j) * determinante del menor
+      const sign = Math.pow(-1, 0 + j);
+      const { determinant: minorDet } = calculateDeterminantWithSteps(minor, []);
+      
+      steps.push(`Elemento a${j+1}, ${j+1} = ${mat[0][j]}, cofactor = ${sign} × det(minor) = ${sign} × ${minorDet}`);
+      
+      // Sumar el producto del elemento por su cofactor
+      const term = mat[0][j] * sign * minorDet;
+      det += term;
+      
+      steps.push(`Término ${j+1}: ${mat[0][j]} × ${sign} × ${minorDet} = ${term}`);
+    }
+    
+    steps.push(`Suma de todos los términos: ${det}`);
+    return { determinant: det, steps };
   }, []);
-  
+
+  const handleCalculate = () => {
+    // Convertir la matriz de strings a números
+    const numericMatrix = matrix.map(row => 
+      row.map(cell => {
+        const num = parseFloat(cell);
+        return isNaN(num) ? 0 : num;
+      })
+    );
+    
+    const { determinant, steps } = calculateDeterminantWithSteps(numericMatrix);
+    setDeterminant(determinant);
+    setCalculationSteps(steps);
+    setShowResult(true);
+    setMatrixCalculated(numericMatrix);
+  };
 
   useEffect(() => {
-    setDeterminant(calculateDeterminant(matrix));
-  }, [matrix, calculateDeterminant]);
+    setMatrix(Array.from({ length: size }, () => Array(size).fill("")))
+  }, [size])
 
   return (
-    <div className="p-6 max-w-2xl mx-auto bg-white rounded-lg shadow-lg">
-      <h2 className="text-3xl font-bold mb-4 text-center text-gray-800">{determinant === 0 ? "Calculadora de matrices" : determinant}</h2>
-      <p className="text-gray-600 mb-6 text-center">Ajusta el tamaño de la matriz y escribe los valores de las celdas.</p>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      <div className="w-full max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-4 sm:p-6">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-center text-gray-800">
+          Calculadora de matrices
+        </h2>
+        <p className="text-sm sm:text-base text-gray-600 mb-6 text-center">
+          Ajusta el tamaño de la matriz y escribe los valores de las celdas.
+        </p>
 
-      <div className="mb-6 flex items-center justify-between">
-        <Button
-          onClick={decreaseSize}
-          disabled={size <= 2}
-          className="w-12 h-12 rounded-full cursor-pointer"
-          aria-label="Decrease matrix size"
-        >
-          <Minus className="w-6 h-6" />
-        </Button>
-        <div className="text-center">
-          <span className="text-2xl font-semibold text-gray-800">
-            {size} x {size}
-          </span>
-          <p className="text-sm text-gray-500">Matrix Size</p>
+        <MatrixSizeControls
+          size={size}
+          onIncrease={increaseSize}
+          onDecrease={decreaseSize}
+        />
+
+        <div className="flex justify-center gap-6 overflow-x-auto">
+          <MatrixInput
+            matrix={matrix}
+            onInputChange={handleInputChange}
+          />
         </div>
-        <Button
-          onClick={increaseSize}
-          disabled={size >= 5}
-          className="w-12 h-12 rounded-full cursor-pointer"
-          aria-label="Increase matrix size"
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
-      </div>
 
-      <div className="flex justify-center gap-6">
-      <div className="mb-6 overflow-x-auto flex justify-center align-middle">
-        <div className="inline-block bg-gray-50 border border-gray-300 rounded-lg p-4 transition-all duration-300 ease-in-out">
-          {matrix.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex mb-2 last:mb-0">  
-              {row.map((cell: number, colIndex: number) => (
-                <div key={`${rowIndex}-${colIndex}`} className="mr-2 last:mr-0">
-                  <Input
-                    type="number"
-                    value={cell}
-                    onChange={(e) => handleInputChange(rowIndex, colIndex, e.target.value)}
-                    className="w-16 h-16 text-center text-lg font-medium bg-white border-2 border-gray-300 rounded-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    aria-label={`Value at row ${rowIndex + 1}, column ${colIndex + 1}`}
-                  />
-                  <div className="text-xs text-gray-500 text-center mt-1">
-                    [{rowIndex + 1}, {colIndex + 1}]
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+        <MatrixActions
+          onClear={clearMatrix}
+          onCalculate={handleCalculate}
+        />
 
-      </div>
-
-      <div className="flex align-middle justify-evenly">
-        <Button
-          onClick={clearMatrix}
-          variant="outline"
-          className="px-4 py-2 text-red-600 border-red-600 hover:bg-red-50 cursor-pointer"
-        >
-          <Trash2 className="w-4 h-4 mr-2" />
-          Clear Matrix
-        </Button>
-
-        <Button
-          variant="outline"
-          onClick={() => calculateDeterminant(matrix)}
-          className="px-4 py-2 text-blue-600 border-blue-600 hover:bg-blue-50 cursor-pointer"
-        >
-          <Calculator className="w-4 h-4 mr-2" />
-          Calcular
-        </Button>
+        {showResult && determinant !== null && matrixCalculated && (
+          <DeterminantResult
+            determinant={determinant}
+            calculationSteps={calculationSteps}
+            matrix={matrixCalculated}
+          />
+        )}
       </div>
     </div>
   )
