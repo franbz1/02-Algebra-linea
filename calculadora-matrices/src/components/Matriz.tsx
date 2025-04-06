@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { MatrixSizeControls } from "./MatrixSizeControls"
 import { MatrixInput } from "./MatrixInput"
 import { MatrixActions } from "./MatrixActions"
-import { DeterminantResult } from "./DeterminantResult"
+import { MatrixResult } from "./MatrixResult"
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -16,24 +16,22 @@ import { MatrixOperations } from "./MatrixOperations"
 
 // Definición de tipos para las operaciones
 type OperationType = 
-  | "suma" 
-  | "resta" 
-  | "producto_punto" 
-  | "producto_cruz" 
-  | "determinante" 
-  | "transpuesta" 
-  | "inversa" 
+  | "sum" 
+  | "subtract" 
+  | "multiply" 
+  | "determinant" 
+  | "transpose" 
+  | "inverse" 
   | "cramer"
 
 // Configuración de las opciones del menú
 const MENU_OPTIONS: { value: OperationType; label: string; description: string }[] = [
-  { value: "suma", label: "Suma de matrices", description: "Suma dos matrices del mismo tamaño" },
-  { value: "resta", label: "Resta de matrices", description: "Resta dos matrices del mismo tamaño" },
-  { value: "producto_punto", label: "Producto punto", description: "Calcula el producto punto de dos vectores" },
-  { value: "producto_cruz", label: "Producto cruz", description: "Calcula el producto cruz de dos vectores en R³" },
-  { value: "determinante", label: "Calcular determinante", description: "Calcula el determinante de una matriz cuadrada" },
-  { value: "transpuesta", label: "Calcular transpuesta", description: "Calcula la matriz transpuesta" },
-  { value: "inversa", label: "Calcular inversa", description: "Calcula la matriz inversa (si existe)" },
+  { value: "sum", label: "Suma de matrices", description: "Suma dos matrices del mismo tamaño" },
+  { value: "subtract", label: "Resta de matrices", description: "Resta dos matrices del mismo tamaño" },
+  { value: "multiply", label: "Producto de matrices", description: "Multiplica dos matrices" },
+  { value: "determinant", label: "Calcular determinante", description: "Calcula el determinante de una matriz cuadrada" },
+  { value: "transpose", label: "Calcular transpuesta", description: "Calcula la matriz transpuesta" },
+  { value: "inverse", label: "Calcular inversa", description: "Calcula la matriz inversa (si existe)" },
   { value: "cramer", label: "Resolver por Cramer", description: "Resuelve un sistema de ecuaciones lineales usando la regla de Cramer" },
 ]
 
@@ -41,10 +39,10 @@ export default function Matriz() {
   const [size, setSize] = useState(2)
   const [matrix, setMatrix] = useState<string[][]>(Array(size).fill(Array(size).fill("")))
   const [matrixCalculated, setMatrixCalculated] = useState<number[][] | null>(null)
-  const [determinant, setDeterminant] = useState<number | null>(null)
+  const [result, setResult] = useState<number | number[][] | null>(null)
   const [calculationSteps, setCalculationSteps] = useState<string[]>([])
   const [showResult, setShowResult] = useState(false)
-  const [selectedOperation, setSelectedOperation] = useState<OperationType>("determinante")
+  const [selectedOperation, setSelectedOperation] = useState<OperationType>("determinant")
   const [isResizing, setIsResizing] = useState(false)
 
   const increaseSize = () => {
@@ -79,7 +77,7 @@ export default function Matriz() {
 
   const clearMatrix = () => {
     setMatrix(Array(size).fill(Array(size).fill("")))
-    setDeterminant(null)
+    setResult(null)
     setCalculationSteps([])
     setShowResult(false)
   }
@@ -94,7 +92,7 @@ export default function Matriz() {
     );
     
     const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix);
-    setDeterminant(determinant);
+    setResult(determinant);
     setCalculationSteps(steps);
     setShowResult(true);
     setMatrixCalculated(numericMatrix);
@@ -103,7 +101,7 @@ export default function Matriz() {
   const handleOperationSelect = (operation: OperationType) => {
     setSelectedOperation(operation)
     setShowResult(false)
-    setDeterminant(null)
+    setResult(null)
     setCalculationSteps([])
   }
 
@@ -208,7 +206,7 @@ export default function Matriz() {
           </div>
 
           <AnimatePresence>
-            {showResult && determinant !== null && matrixCalculated && (
+            {showResult && result !== null && matrixCalculated && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -216,10 +214,12 @@ export default function Matriz() {
                 transition={{ duration: 0.2 }}
                 className="bg-emerald-50 rounded-md border border-emerald-200 p-4"
               >
-                <DeterminantResult
-                  determinant={determinant}
-                  calculationSteps={calculationSteps}
+                <MatrixResult
+                  title={getSelectedOperationLabel()}
+                  result={result}
+                  steps={calculationSteps}
                   matrix={matrixCalculated}
+                  type={selectedOperation}
                 />
               </motion.div>
             )}
