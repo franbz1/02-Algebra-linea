@@ -9,6 +9,7 @@ export type OperationType =
   | "adjoint"
   | "inverse" 
   | "cramer"
+  | "solve_inverse"
 
 // Interface para definir la estructura de una opción de operación
 export interface OperationOption {
@@ -29,5 +30,6 @@ export const MENU_OPTIONS: OperationOption[] = [
   { value: "transpose", label: "Calcular transpuesta", description: "Calcula la matriz transpuesta" },
   { value: "adjoint", label: "Calcular adjunta", description: "Calcula la matriz adjunta (transpuesta de cofactores)" },
   { value: "inverse", label: "Calcular inversa", description: "Calcula la matriz inversa (si existe)" },
-  { value: "cramer", label: "Resolver por Cramer", description: "Resuelve un sistema de ecuaciones lineales usando la regla de Cramer" },
+  { value: "cramer", label: "Resolver por Cramer", description: "Resuelve Ax=B usando la regla de Cramer" },
+  { value: "solve_inverse", label: "Resolver por Inversa", description: "Resuelve Ax=B usando la matriz inversa (x = A⁻¹B)" },
 ]; 

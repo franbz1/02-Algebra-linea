@@ -70,7 +70,8 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, vectorB, t
       case "sum": return "La suma de las matrices es:";
       case "subtract": return "La resta de las matrices es:";
       case "multiply": return "El producto de las matrices es:";
-      case "cramer": return "La solución del sistema (x, y, z...) es:";
+      case "cramer": return "La solución del sistema (por Cramer) es:";
+      case "solve_inverse": return "La solución del sistema (por Inversa) es:";
       default: return "Resultado:";
     }
   };
@@ -107,9 +108,9 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, vectorB, t
         break;
 
       case "cramer":
+      case "solve_inverse":
          // Verificar explícitamente que es un array y NO un array de arrays
          if (Array.isArray(result) && (result.length === 0 || !Array.isArray(result[0])) ) {
-           // Forzar conversión a unknown primero, como último recurso para el linter
            const solutionVector = result as unknown as number[]; 
            return (
              <div className="font-mono text-lg font-medium text-rose-600 flex gap-4 items-center bg-rose-50 p-3 rounded-md border border-rose-200 flex-wrap justify-center">

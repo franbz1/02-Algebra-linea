@@ -17,15 +17,30 @@ import { DecimalPlacesControl } from "./DecimalPlacesControl"
 import { MatrixDimensionControl } from "./MatrixDimensionControl"
 import { VectorInput } from "./VectorInput"
 
+// Definir qué operaciones necesitan matriz cuadrada
+const SQUARE_OPERATIONS: OperationType[] = [
+    "determinant", 
+    "determinant_sarrus", 
+    "adjoint", 
+    "inverse", 
+    "cramer", 
+    "solve_inverse" // Añadir aquí
+];
+
+// Extender opciones con info de cuadrada y dos matrices
 interface ExtendedOperationOption extends OperationOption {
   requiresSquare?: boolean;
   requiresTwoMatrices?: boolean;
+  requiresVectorB?: boolean; // Añadir flag para Vector B
 }
 
 const EXTENDED_MENU_OPTIONS: ExtendedOperationOption[] = MENU_OPTIONS.map(opt => ({
   ...opt,
-  requiresSquare: ["determinant", "determinant_sarrus", "adjoint", "inverse"].includes(opt.value),
-  requiresTwoMatrices: ["sum", "subtract", "multiply"].includes(opt.value)
+  requiresSquare: SQUARE_OPERATIONS.includes(opt.value),
+  // Solo Suma, Resta, Multiplicación necesitan Matriz B
+  requiresTwoMatrices: ["sum", "subtract", "multiply"].includes(opt.value),
+  // Cramer y Solve by Inverse necesitan Vector B
+  requiresVectorB: ["cramer", "solve_inverse"].includes(opt.value)
 }));
 
 // Helper para crear matriz vacía
@@ -163,6 +178,12 @@ export default function Matriz() {
         setResult(null)
         return
     }
+    if (selectedOperation === 'solve_inverse' && vectorB.length !== N) {
+        setCalculationSteps([`Error: Vector B debe tener ${N} elementos (dimensiones A: ${rowsA}x${colsA}).`])
+        setShowResult(true)
+        setResult(null)
+        return
+    }
 
     const numericMatrix = matrix.map(row => 
       row.map(cell => {
@@ -182,7 +203,7 @@ export default function Matriz() {
     }
 
     let numericVectorB: number[] | null = null
-    if (selectedOperation === 'cramer') {
+    if (selectedOperation === 'cramer' || selectedOperation === 'solve_inverse') {
         numericVectorB = vectorB.map(cell => {
             const num = parseFloat(cell)
             return isNaN(num) ? 0 : num
@@ -280,6 +301,21 @@ export default function Matriz() {
             }
           }
           break
+        case "solve_inverse":
+          if (!numericVectorB) {
+            console.error("Error interno: Vector B numérico no disponible para solve_inverse.")
+            setCalculationSteps(["Error interno: Fallo al procesar el Vector B."])
+            operationResult = null
+          } else {
+            const solveResult = MatrixOperations.solveByInverseWithSteps(numericMatrix, numericVectorB, decimalPlaces)
+            if (solveResult.result === null) {
+              setCalculationSteps(solveResult.steps)
+              operationResult = null
+            } else {
+              operationResult = { result: solveResult.result, steps: solveResult.steps }
+            }
+          }
+          break
         default:
           console.error(`Operación desconocida: ${selectedOperation}`)
           setCalculationSteps([`Error: Operación desconocida '${selectedOperation}'.`])
@@ -314,25 +350,25 @@ export default function Matriz() {
 
     const needsSquare = config.requiresSquare ?? false
     const needsTwoMatrices = config.requiresTwoMatrices ?? false
+    const needsVectorB = config.requiresVectorB ?? false
     const isMultiply = operation === 'multiply'
-    const isCramer = operation === 'cramer'
 
-    setForceSquare(needsSquare || isCramer)
-    setShowMatrixBInput(needsTwoMatrices && !isCramer)
-    setShowVectorBInput(isCramer)
+    setForceSquare(needsSquare)
+    setShowMatrixBInput(needsTwoMatrices)
+    setShowVectorBInput(needsVectorB)
     setSyncBRowsToACols(isMultiply)
     setShowResult(false)
     setResult(null)
     setCalculationSteps([])
 
     let currentN = rowsA
-    if (needsSquare || isCramer) {
+    if (needsSquare) {
         if(rowsA !== colsA) {
            currentN = Math.max(rowsA, colsA, 2) 
            setRowsA(currentN)
            setColsA(currentN)
         } 
-        if(isCramer && vectorB.length !== currentN) {
+        if(needsVectorB && vectorB.length !== currentN) {
            setVectorB(createEmptyVector(currentN))
         }        
     } else if (isMultiply) {
@@ -378,12 +414,12 @@ export default function Matriz() {
                 <span className="sr-only">Abrir menú</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 max-h-72 overflow-y-auto">
               {EXTENDED_MENU_OPTIONS.map((option) => (
                 <DropdownMenuItem 
                   key={option.value}
                   onSelect={() => handleOperationSelect(option.value)}
-                  className="flex flex-col items-start py-2"
+                  className="flex flex-col items-start py-2 cursor-pointer focus:bg-indigo-50"
                 >
                   <span className="font-medium text-slate-900">{option.label}</span>
                   <span className="text-xs text-slate-500">{option.description}</span>
@@ -437,9 +473,9 @@ export default function Matriz() {
           <div className={`grid gap-4 ${showMatrixBInput || showVectorBInput ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <div className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-center gap-4">
                 <span className="font-medium text-slate-700 self-center">
-                    {forceSquare || selectedOperation === 'cramer' ? 'Tamaño N:' : 'Matriz A:'}
+                    {forceSquare ? 'Tamaño N:' : 'Matriz A:'}
                 </span>
-                 {(forceSquare || selectedOperation === 'cramer') ? (
+                 {forceSquare ? (
                     <MatrixDimensionControl 
                         label="N" 
                         value={rowsA}
@@ -469,19 +505,19 @@ export default function Matriz() {
           </div>
 
           <div className={`flex flex-wrap justify-center items-center gap-4 md:gap-6 ${(showMatrixBInput || showVectorBInput) ? 'md:flex-nowrap' : ''}`}>
-            <motion.div 
+          <motion.div
               key={`matrix-a-${rowsA}`} 
               layout 
               className="w-full md:w-auto"
-            >
-               <MatrixInput 
-                   matrix={matrix} 
-                   onInputChange={handleInputChange} 
-                   label={selectedOperation === 'cramer' ? 'Matriz de Coeficientes (A)' : `Matriz A${(forceSquare) ? ` (${rowsA}×${rowsA})` : ` (${rowsA}×${colsA})`}`} 
-               />
-            </motion.div>
-            
-            {selectedOperation === 'cramer' && (
+          >
+            <MatrixInput
+              matrix={matrix}
+              onInputChange={handleInputChange}
+                   label={(selectedOperation === 'cramer' || selectedOperation === 'solve_inverse') ? 'Matriz de Coeficientes (A)' : `Matriz A${forceSquare ? ` (${rowsA}×${rowsA})` : ` (${rowsA}×${colsA})`}`} 
+            />
+          </motion.div>
+
+            {(selectedOperation === 'cramer' || selectedOperation === 'solve_inverse') && (
                 <motion.div 
                     key="cramer-separator" 
                     initial={{ opacity: 0, scale: 0.5 }} 

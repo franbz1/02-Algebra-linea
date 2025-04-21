@@ -551,6 +551,83 @@ export class MatrixOperations {
     return { result: solution, steps };
   }
 
+  // --- Solución por Inversa --- 
+  /**
+   * Resuelve un sistema de ecuaciones lineales Ax = B usando x = A⁻¹B.
+   * @param matrixA Matriz de coeficientes (cuadrada NxN).
+   * @param vectorB Vector de términos independientes (N elementos).
+   * @param decimalPlaces Precisión para los pasos.
+   * @returns Objeto con el vector solución [x1, x2,... xn] y los pasos, o null y error.
+   */
+  static solveByInverseWithSteps(matrixA: number[][], vectorB: number[], decimalPlaces: number = 2): { result: number[] | null; steps: string[] } {
+    let combinedSteps: string[] = [];
+    const n = matrixA.length;
+
+    combinedSteps.push("Resolviendo sistema Ax = B por Matriz Inversa:");
+    combinedSteps.push("Fórmula: x = A⁻¹ * B");
+    combinedSteps.push("Matriz de Coeficientes (A):");
+    combinedSteps.push(this.matrixToString(matrixA, decimalPlaces));
+    combinedSteps.push("Vector de Términos Independientes (B):");
+    const vectorBString = "  [" + vectorB.map(v => formatNumberForSteps(v, decimalPlaces)).join(", ") + "]ᵀ";
+    combinedSteps.push(vectorBString);
+
+    // Validaciones básicas
+    if (n === 0 || matrixA.some(row => row.length !== n) || vectorB.length !== n) {
+        combinedSteps.push("Error: Dimensiones inválidas. A debe ser NxN y B debe ser N.");
+        // Añadir detalles específicos del error
+        if(n === 0) combinedSteps.push("  Matriz A está vacía.");
+        if(matrixA.some(row => row.length !== n)) combinedSteps.push("  Matriz A no es cuadrada.");
+        if(vectorB.length !== n) combinedSteps.push(`  Tamaño de vector B (${vectorB.length}) no coincide con N (${n}).`);
+        return { result: null, steps: combinedSteps };
+    }
+
+    // --- Paso 1: Calcular Inversa A⁻¹ --- 
+    combinedSteps.push("\n--- Paso 1: Calcular la Matriz Inversa A⁻¹ ---");
+    const inverseResult = this.calculateInverseWithSteps(matrixA, decimalPlaces);
+    combinedSteps.push(...inverseResult.steps); // Incluir todos los pasos de la inversa
+
+    if (!inverseResult.result) {
+        combinedSteps.push("\nError: No se pudo calcular la inversa de A (puede ser singular). No se puede continuar.");
+        return { result: null, steps: combinedSteps };
+    }
+    const matrixInverse = inverseResult.result;
+    combinedSteps.push("\nMatriz Inversa calculada (A⁻¹):");
+    combinedSteps.push(this.matrixToString(matrixInverse, decimalPlaces));
+
+    // --- Paso 2: Calcular x = A⁻¹ * B --- 
+    combinedSteps.push("\n--- Paso 2: Calcular la solución x = A⁻¹ * B ---");
+    // Convertir vectorB a matriz columna Nx1 para la multiplicación
+    const matrixBCol: number[][] = vectorB.map(val => [val]);
+    combinedSteps.push("Vector B como matriz columna (B_col):");
+    combinedSteps.push(this.matrixToString(matrixBCol, decimalPlaces));
+
+    // Usar la función de multiplicación existente
+    const multResult = this.multiplyMatricesWithSteps(matrixInverse, matrixBCol, decimalPlaces);
+    
+    // Incluir los pasos de la multiplicación
+    combinedSteps.push("\nDetalles de la multiplicación A⁻¹ * B_col:");
+    combinedSteps.push(...multResult.steps); // Añadir pasos de la multiplicación
+
+    if (!multResult.result) {
+        combinedSteps.push("\nError: Ocurrió un error inesperado durante la multiplicación A⁻¹ * B.");
+        return { result: null, steps: combinedSteps };
+    }
+    
+    const resultMatrix = multResult.result; // Será una matriz Nx1
+
+    // Extraer la solución (vector x) de la matriz resultado Nx1
+    const solutionVector: number[] = resultMatrix.map(row => row[0]);
+
+    combinedSteps.push("\n--- Solución Final --- ");
+    combinedSteps.push("El resultado de A⁻¹ * B es la matriz columna:");
+    combinedSteps.push(this.matrixToString(resultMatrix, decimalPlaces));
+    combinedSteps.push("Vector Solución (x):");
+    combinedSteps.push("  x = [" + solutionVector.map(x => formatNumberForSteps(x, decimalPlaces)).join(", ") + "]ᵀ");
+    combinedSteps.push("Cálculo completado.");
+
+    return { result: solutionVector, steps: combinedSteps };
+  }
+
   // --- Funciones Auxiliares --- 
 
   private static getSubMatrix(matrix: number[][], rowToRemove: number, colToRemove: number): number[][] {
