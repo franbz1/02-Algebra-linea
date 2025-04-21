@@ -157,6 +157,15 @@ export default function Matriz() {
             operationResult = { result: transposeResult.result, steps: transposeResult.steps };
           }
           break;
+        case "adjoint":
+          const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix);
+          if (adjointResult.result === null) {
+            setCalculationSteps(adjointResult.steps);
+            operationResult = null;
+          } else {
+            operationResult = { result: adjointResult.result, steps: adjointResult.steps };
+          }
+          break;
         case "sum":
         case "subtract":
           console.warn(`Operación '${selectedOperation}' no implementada aún.`);

@@ -6,6 +6,7 @@ export type OperationType =
   | "determinant" 
   | "determinant_sarrus"
   | "transpose" 
+  | "adjoint"
   | "inverse" 
   | "cramer"
 
@@ -26,6 +27,7 @@ export const MENU_OPTIONS: OperationOption[] = [
   { value: "determinant", label: "Determinante (General)", description: "Calcula el determinante (método cofactores)" },
   { value: "determinant_sarrus", label: "Determinante por Sarrus", description: "Calcula el determinante usando Sarrus (solo 3x3)" },
   { value: "transpose", label: "Calcular transpuesta", description: "Calcula la matriz transpuesta" },
+  { value: "adjoint", label: "Calcular adjunta", description: "Calcula la matriz adjunta (transpuesta de cofactores)" },
   { value: "inverse", label: "Calcular inversa", description: "Calcula la matriz inversa (si existe)" },
   { value: "cramer", label: "Resolver por Cramer", description: "Resuelve un sistema de ecuaciones lineales usando la regla de Cramer" },
 ]; 

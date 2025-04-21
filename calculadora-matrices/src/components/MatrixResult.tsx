@@ -59,6 +59,7 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, type }: Ma
       case "determinant_sarrus":
         return "El determinante de la matriz es:";
       case "transpose": return "La matriz transpuesta es:";
+      case "adjoint": return "La matriz adjunta es:";
       case "inverse": return "La matriz inversa es:";
       case "sum": return "La suma de las matrices es:";
       case "subtract": return "La resta de las matrices es:";
@@ -91,6 +92,7 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, type }: Ma
       case "subtract":
       case "multiply":
       case "transpose":
+      case "adjoint":
       case "inverse":
         if (Array.isArray(result) && Array.isArray(result[0])) {
           // Resultado esperado: Matriz

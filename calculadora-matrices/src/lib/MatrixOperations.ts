@@ -6,86 +6,193 @@ export class MatrixOperations {
    * @returns Un objeto que contiene el determinante y los pasos del cálculo.
    */
   static calculateDeterminantWithSteps(matrix: number[][]): { determinant: number; steps: string[] } {
-    const n = matrix.length;
     let steps: string[] = [];
+    const n = matrix.length;
 
-    if (n === 0) {
-      steps.push("La matriz está vacía, el determinante es 0.");
-      return { determinant: 0, steps };
-    }
-
+    if (n === 0) return { determinant: 0, steps: ["La matriz está vacía, el determinante es 0."] };
     if (matrix.some(row => row.length !== n)) {
-      steps.push("Error: La matriz no es cuadrada.");
-      // En un caso real, podríamos lanzar un error o devolver un valor específico
-      return { determinant: NaN, steps }; 
+      return { determinant: NaN, steps: ["Error: La matriz no es cuadrada."] };
     }
 
-    steps.push(`Calculando el determinante de la matriz ${n}x${n}:`);
+    steps.push(`Calculando el determinante de la matriz ${n}x${n} (método cofactores):`);
     steps.push(this.matrixToString(matrix));
 
-    const result = this.determinantRecursive(matrix, steps);
-    steps.push(`\nResultado final: El determinante es ${result}.`);
+    const determinant = this.calculateDeterminantRecursive(matrix, steps, true); // Pasar true para generar pasos
+    steps.push(`\nResultado final: El determinante es ${determinant}.`);
     
-    return { determinant: result, steps };
+    return { determinant, steps };
   }
 
-  private static determinantRecursive(matrix: number[][], steps: string[]): number {
+  /**
+   * Función recursiva interna para calcular el determinante.
+   * Puede opcionalmente generar pasos detallados.
+   * @param matrix Matriz actual.
+   * @param steps Array para almacenar los pasos (si generateSteps es true).
+   * @param generateSteps Indica si se deben añadir pasos detallados al array `steps`.
+   * @param level Nivel de indentación para los pasos.
+   * @returns El valor del determinante.
+   */
+  private static calculateDeterminantRecursive(matrix: number[][], steps: string[], generateSteps: boolean, level = 0): number {
     const n = matrix.length;
+    const indent = ' '.repeat(level * 2);
 
     if (n === 1) {
       const value = matrix[0][0];
-      steps.push(`  Determinante de matriz 1x1 [[${value}]]: ${value}`);
+      if (generateSteps) steps.push(`${indent}  Determinante de matriz 1x1 [[${value}]]: ${value}`);
       return value;
     }
 
     if (n === 2) {
-      const a = matrix[0][0];
-      const b = matrix[0][1];
-      const c = matrix[1][0];
-      const d = matrix[1][1];
+      const [a, b] = matrix[0];
+      const [c, d] = matrix[1];
       const det = a * d - b * c;
-      steps.push(`  Determinante de matriz 2x2 [[${a}, ${b}], [${c}, ${d}]]: (${a} * ${d}) - (${b} * ${c}) = ${det}`);
+      if (generateSteps) steps.push(`${indent}  Determinante de matriz 2x2 [[${a.toFixed(2)}, ${b.toFixed(2)}], [${c.toFixed(2)}, ${d.toFixed(2)}]]: (${a.toFixed(2)} * ${d.toFixed(2)}) - (${b.toFixed(2)} * ${c.toFixed(2)}) = ${det.toFixed(4)}`);
       return det;
     }
 
     let determinant = 0;
-    steps.push(`  Expandiendo por la primera fila:`);
+    if (generateSteps) steps.push(`${indent}  Expandiendo por la primera fila:`);
 
     for (let j = 0; j < n; j++) {
       const cofactorSign = Math.pow(-1, j);
       const element = matrix[0][j];
-      steps.push(`    Elemento (${0}, ${j}): ${element}, Signo: ${cofactorSign > 0 ? '+' : '-'}`);
+      if (generateSteps) steps.push(`${indent}    Elemento (${0}, ${j}): ${element.toFixed(2)}, Signo: ${cofactorSign > 0 ? '+' : '-'}`);
 
-      if (element !== 0) { // Optimización: si el elemento es 0, el término es 0
+      if (element !== 0) {
         const subMatrix = this.getSubMatrix(matrix, 0, j);
-        steps.push(`      Submatriz para el elemento (${0}, ${j}):`);
-        steps.push(this.matrixToString(subMatrix, 8)); // Indent submatrix string
-        
-        const subDeterminant = this.determinantRecursive(subMatrix, steps);
+        if (generateSteps) {
+            steps.push(`${indent}      Submatriz para el elemento (${0}, ${j}):`);
+            steps.push(this.matrixToString(subMatrix, level * 2 + 8));
+        }
+        // Llamada recursiva SIN generar pasos detallados de la sub-recursión si ya estamos generando pasos
+        const subDeterminant = this.calculateDeterminantRecursive(subMatrix, steps, false, level + 1); 
         const term = cofactorSign * element * subDeterminant;
-        steps.push(`      Término ${j + 1}: (${cofactorSign > 0 ? '+' : '-'}1) * ${element} * ${subDeterminant} = ${term}`);
+        if (generateSteps) steps.push(`${indent}      SubDeterminante: ${subDeterminant.toFixed(4)}`);
+        if (generateSteps) steps.push(`${indent}      Término ${j + 1}: (${cofactorSign > 0 ? '+' : '-'}1) * ${element.toFixed(2)} * ${subDeterminant.toFixed(4)} = ${term.toFixed(4)}`);
         determinant += term;
       } else {
-        steps.push(`      Término ${j + 1}: 0 (elemento es 0)`);
+        if (generateSteps) steps.push(`${indent}      Término ${j + 1}: 0 (elemento es 0)`);
       }
     }
-    steps.push(`  Suma de los términos para la matriz ${n}x${n}: ${determinant}`);
+    if (generateSteps) steps.push(`${indent}  Suma de los términos para la matriz ${n}x${n}: ${determinant.toFixed(4)}`);
     return determinant;
   }
+  
+  /**
+   * Calcula el determinante de una matriz (sin generar pasos).
+   * @param matrix Matriz cuadrada.
+   * @returns El determinante, o NaN si no es cuadrada.
+   */
+   static calculateDeterminant(matrix: number[][]): number {
+     const n = matrix.length;
+     if (n === 0) return 0;
+     if (matrix.some(row => row.length !== n)) return NaN; 
+     return this.calculateDeterminantRecursive(matrix, [], false); // No generar pasos
+   }
 
-  private static getSubMatrix(matrix: number[][], rowToRemove: number, colToRemove: number): number[][] {
-    return matrix
-      .filter((_, rowIndex) => rowIndex !== rowToRemove)
-      .map(row => row.filter((_, colIndex) => colIndex !== colToRemove));
+  // --- Cálculo de Cofactor y Adjunta --- 
+
+  /**
+   * Calcula el cofactor de un elemento específico de una matriz.
+   * C(i, j) = (-1)^(i+j) * M(i, j), donde M(i, j) es el determinante de la submatriz.
+   * @param matrix Matriz original.
+   * @param row Índice de fila del elemento (basado en 0).
+   * @param col Índice de columna del elemento (basado en 0).
+   * @returns El valor del cofactor.
+   */
+  private static getCofactor(matrix: number[][], row: number, col: number): number {
+      const n = matrix.length;
+      if (n === 0 || matrix.some(r => r.length !== n)) return NaN; // No es cuadrada
+      
+      const subMatrix = this.getSubMatrix(matrix, row, col);
+      const minorDeterminant = this.calculateDeterminant(subMatrix);
+      const sign = Math.pow(-1, row + col);
+      
+      return sign * minorDeterminant;
   }
 
-  private static matrixToString(matrix: number[][], indentation = 4): string {
-    const indent = ' '.repeat(indentation);
-    return indent + '[' +
-      matrix.map(row => 
-        '[' + row.map(cell => cell.toFixed(2)).join(', ') + ']' // Formato con 2 decimales
-      ).join(',\n' + indent + ' ')
-    + ']';
+  /**
+   * Calcula la matriz de cofactores de una matriz dada.
+   * @param matrix Matriz cuadrada original.
+   * @param steps Array para añadir los pasos del cálculo.
+   * @returns La matriz de cofactores, o null si la matriz no es cuadrada.
+   */
+  private static getMatrixOfCofactors(matrix: number[][], steps: string[]): number[][] | null {
+      const n = matrix.length;
+      if (n === 0) {
+          steps.push("Error: La matriz está vacía.");
+          return null;
+      }
+      if (matrix.some(row => row.length !== n)) {
+          steps.push("Error: La matriz debe ser cuadrada para calcular cofactores.");
+          return null;
+      }
+
+      steps.push("\nCalculando la Matriz de Cofactores:");
+      steps.push("  C[i, j] = (-1)^(i+j) * det(SubMatriz(i, j))");
+      const cofactorMatrix: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
+
+      for (let i = 0; i < n; i++) {
+          for (let j = 0; j < n; j++) {
+              const cofactor = this.getCofactor(matrix, i, j);
+              if (isNaN(cofactor)) {
+                  steps.push(`Error calculando cofactor en [${i + 1}, ${j + 1}]`);
+                  return null; // Error interno
+              }
+              cofactorMatrix[i][j] = cofactor;
+              const sign = Math.pow(-1, i + j);
+              // Detalle opcional del cálculo del cofactor (puede ser muy verboso)
+              steps.push(`  C[${i + 1}, ${j + 1}] = (${sign > 0 ? '+':'-'}1) * det(SubMatriz(${i + 1}, ${j + 1})) = ${cofactor.toFixed(4)}`);
+          }
+      }
+       steps.push("\nMatriz de Cofactores (C):");
+       steps.push(this.matrixToString(cofactorMatrix));
+      return cofactorMatrix;
+  }
+
+   /**
+   * Calcula la matriz adjunta (transpuesta de la matriz de cofactores).
+   * @param matrix Matriz cuadrada original.
+   * @returns Objeto con la matriz adjunta y los pasos, o null y error.
+   */
+  static calculateAdjointWithSteps(matrix: number[][]): { result: number[][] | null; steps: string[] } {
+      let steps: string[] = [];
+      steps.push("Calculando la Matriz Adjunta:");
+      steps.push("Matriz Original (A):");
+      steps.push(this.matrixToString(matrix));
+
+      const cofactorMatrix = this.getMatrixOfCofactors(matrix, steps);
+
+      if (!cofactorMatrix) {
+          // El error ya se añadió a los pasos en getMatrixOfCofactors
+          return { result: null, steps };
+      }
+
+      steps.push("\nCalculando la Matriz Adjunta (Adj(A)) = Transpuesta(Matriz de Cofactores):");
+      // Usar la lógica de transposición (podríamos tener una función interna transpose)
+      const rowsCofactor = cofactorMatrix.length;
+      const colsCofactor = cofactorMatrix[0]?.length ?? 0;
+      
+       if (rowsCofactor === 0 || colsCofactor === 0) { // Debería ser cuadrado si llegó aquí
+         steps.push("Error: La matriz de cofactores está vacía.");
+         return { result: null, steps };
+       }
+
+      const adjointMatrix: number[][] = Array.from({ length: colsCofactor }, () => Array(rowsCofactor).fill(0));
+       steps.push(`  Adj(A)[j, i] = C[i, j]`);
+       
+       for (let i = 0; i < rowsCofactor; i++) {
+           for (let j = 0; j < colsCofactor; j++) {
+               adjointMatrix[j][i] = cofactorMatrix[i][j];
+               steps.push(`  Adj(A)[${j + 1}, ${i + 1}] = C[${i + 1}, ${j + 1}] = ${cofactorMatrix[i][j].toFixed(4)}`);
+           }
+       }
+
+      steps.push("\nMatriz Adjunta (Adj(A)):");
+      steps.push(this.matrixToString(adjointMatrix));
+      steps.push("\nCálculo completado.");
+
+      return { result: adjointMatrix, steps };
   }
 
   /**
@@ -244,6 +351,23 @@ export class MatrixOperations {
     steps.push("\nCálculo completado.");
 
     return { result: resultMatrix, steps };
+  }
+
+  // --- Funciones Auxiliares --- 
+
+  private static getSubMatrix(matrix: number[][], rowToRemove: number, colToRemove: number): number[][] {
+    return matrix
+      .filter((_, rowIndex) => rowIndex !== rowToRemove)
+      .map(row => row.filter((_, colIndex) => colIndex !== colToRemove));
+  }
+
+  private static matrixToString(matrix: number[][], indentation = 4): string {
+    const indent = ' '.repeat(indentation);
+    return indent + '[' +
+      matrix.map(row => 
+        '[' + row.map(cell => cell.toFixed(2)).join(', ') + ']' // Formato con 2 decimales
+      ).join(',\n' + indent + ' ')
+    + ']';
   }
 
   // --- Aquí se añadirían otras funciones de cálculo --- 
