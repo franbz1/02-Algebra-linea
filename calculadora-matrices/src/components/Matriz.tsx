@@ -12,28 +12,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Menu, Calculator } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { MatrixOperations } from "./MatrixOperations"
-
-// Definición de tipos para las operaciones
-type OperationType = 
-  | "sum" 
-  | "subtract" 
-  | "multiply" 
-  | "determinant" 
-  | "transpose" 
-  | "inverse" 
-  | "cramer"
-
-// Configuración de las opciones del menú
-const MENU_OPTIONS: { value: OperationType; label: string; description: string }[] = [
-  { value: "sum", label: "Suma de matrices", description: "Suma dos matrices del mismo tamaño" },
-  { value: "subtract", label: "Resta de matrices", description: "Resta dos matrices del mismo tamaño" },
-  { value: "multiply", label: "Producto de matrices", description: "Multiplica dos matrices" },
-  { value: "determinant", label: "Calcular determinante", description: "Calcula el determinante de una matriz cuadrada" },
-  { value: "transpose", label: "Calcular transpuesta", description: "Calcula la matriz transpuesta" },
-  { value: "inverse", label: "Calcular inversa", description: "Calcula la matriz inversa (si existe)" },
-  { value: "cramer", label: "Resolver por Cramer", description: "Resuelve un sistema de ecuaciones lineales usando la regla de Cramer" },
-]
+import { MatrixOperations } from "../lib/MatrixOperations"
+import { MENU_OPTIONS, OperationType } from "../config/operations"
 
 export default function Matriz() {
   const [size, setSize] = useState(2)
@@ -83,7 +63,6 @@ export default function Matriz() {
   }
 
   const handleCalculate = () => {
-    // Convertir la matriz de strings a números
     const numericMatrix = matrix.map(row => 
       row.map(cell => {
         const num = parseFloat(cell);
@@ -91,11 +70,79 @@ export default function Matriz() {
       })
     );
     
-    const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix);
-    setResult(determinant);
-    setCalculationSteps(steps);
-    setShowResult(true);
-    setMatrixCalculated(numericMatrix);
+    let operationResult: { result: number | number[][]; steps: string[] } | null = null;
+
+    try {
+      switch (selectedOperation) {
+        case "determinant":
+          if (numericMatrix.length !== numericMatrix[0]?.length) {
+            console.error("La matriz debe ser cuadrada para calcular el determinante.");
+            setCalculationSteps(["Error: La matriz debe ser cuadrada para calcular el determinante."])
+            setShowResult(true)
+            setResult(null)
+            setMatrixCalculated(numericMatrix)
+            return;
+          }
+          const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix);
+          operationResult = { result: determinant, steps };
+          break;
+        case "determinant_sarrus":
+          const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix);
+          if (isNaN(sarrusResult.determinant)) {
+            setCalculationSteps(sarrusResult.steps);
+            operationResult = null;
+          } else {
+            operationResult = { result: sarrusResult.determinant, steps: sarrusResult.steps };
+          }
+          break;
+        case "sum":
+          console.warn("Operación 'Suma' no implementada aún.");
+          setCalculationSteps(["Operación no implementada."])
+          break;
+        case "subtract":
+          console.warn("Operación 'Resta' no implementada aún.");
+          setCalculationSteps(["Operación no implementada."])
+          break;
+        case "multiply":
+          console.warn("Operación 'Multiplicación' no implementada aún.");
+          setCalculationSteps(["Operación no implementada."])
+          break;
+        case "transpose":
+          console.warn("Operación 'Transpuesta' no implementada aún.");
+          setCalculationSteps(["Operación no implementada."])
+          break;
+        case "inverse":
+          console.warn("Operación 'Inversa' no implementada aún.");
+          setCalculationSteps(["Operación no implementada."])
+          break;
+        case "cramer":
+          console.warn("Operación 'Cramer' no implementada aún.");
+          setCalculationSteps(["Operación no implementada."])
+          break;
+        default:
+          console.error(`Operación desconocida: ${selectedOperation}`);
+          setCalculationSteps([`Error: Operación desconocida '${selectedOperation}'.`])
+          operationResult = null;
+      }
+
+      if (operationResult) {
+        setResult(operationResult.result);
+        setCalculationSteps(operationResult.steps);
+        setShowResult(true);
+        setMatrixCalculated(numericMatrix);
+      } else {
+        setShowResult(true)
+        setResult(null)
+        setMatrixCalculated(numericMatrix)
+      }
+
+    } catch (error) {
+      console.error("Error durante el cálculo:", error);
+      setCalculationSteps([`Error inesperado durante el cálculo: ${error instanceof Error ? error.message : String(error)}`])
+      setResult(null)
+      setShowResult(true)
+      setMatrixCalculated(numericMatrix)
+    }
   };
 
   const handleOperationSelect = (operation: OperationType) => {
@@ -105,34 +152,34 @@ export default function Matriz() {
     setCalculationSteps([])
   }
 
-  // Función para obtener la etiqueta de la operación seleccionada
   const getSelectedOperationLabel = () => {
     return MENU_OPTIONS.find(option => option.value === selectedOperation)?.label || "Seleccionar operación"
   }
 
   useEffect(() => {
     setMatrix(Array.from({ length: size }, () => Array(size).fill("")))
+    setShowResult(false)
   }, [size])
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 bg-gradient-to-b from-slate-50 to-slate-100">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-3xl mx-auto bg-white rounded-lg shadow-md p-6 sm:p-8"
+        className="w-full max-w-3xl mx-auto bg-white rounded-lg shadow-md p-3 sm:p-6 md:p-8"
       >
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-0 mb-6 sm:mb-8">
           <div className="flex items-center gap-3">
-            <Calculator className="h-6 w-6 text-indigo-600" />
-            <h1 className="text-2xl font-semibold text-slate-800">
+            <Calculator className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600" />
+            <h1 className="text-xl sm:text-2xl font-semibold text-slate-800">
               Calculadora de matrices
             </h1>
           </div>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="cursor-pointer h-9 w-9 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">
+              <Button variant="outline" size="icon" className="cursor-pointer h-8 w-8 sm:h-9 sm:w-9 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">
                 <Menu className="h-4 w-4" />
                 <span className="sr-only">Abrir menú</span>
               </Button>
@@ -152,8 +199,8 @@ export default function Matriz() {
           </DropdownMenu>
         </div>
 
-        <div className="space-y-6">
-          <div className="flex items-center justify-between p-3 bg-indigo-50 rounded-md">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-3 bg-indigo-50 rounded-md gap-2 sm:gap-0">
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-600">Operación:</span>
               <span className="text-sm font-medium text-indigo-700">{getSelectedOperationLabel()}</span>
@@ -178,7 +225,7 @@ export default function Matriz() {
           </div>
 
           <motion.div
-            key={size}
+            key={`matrix-a-${size}`}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ 
               scale: isResizing ? 0.95 : 1, 
@@ -206,19 +253,19 @@ export default function Matriz() {
           </div>
 
           <AnimatePresence>
-            {showResult && result !== null && matrixCalculated && (
+            {showResult && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
                 transition={{ duration: 0.2 }}
-                className="bg-emerald-50 rounded-md border border-emerald-200 p-4"
+                className={`${result !== null ? 'bg-emerald-50 border-emerald-200' : 'bg-yellow-50 border-yellow-200'} rounded-md border p-4`}
               >
                 <MatrixResult
                   title={getSelectedOperationLabel()}
                   result={result}
                   steps={calculationSteps}
-                  matrix={matrixCalculated}
+                  matrix={matrixCalculated ?? undefined}
                   type={selectedOperation}
                 />
               </motion.div>
