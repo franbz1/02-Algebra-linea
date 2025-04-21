@@ -15,6 +15,7 @@ import { MatrixOperations } from "../lib/MatrixOperations"
 import { MENU_OPTIONS, OperationType, OperationOption } from "../config/operations"
 import { DecimalPlacesControl } from "./DecimalPlacesControl"
 import { MatrixDimensionControl } from "./MatrixDimensionControl"
+import { VectorInput } from "./VectorInput"
 
 interface ExtendedOperationOption extends OperationOption {
   requiresSquare?: boolean;
@@ -27,46 +28,66 @@ const EXTENDED_MENU_OPTIONS: ExtendedOperationOption[] = MENU_OPTIONS.map(opt =>
   requiresTwoMatrices: ["sum", "subtract", "multiply"].includes(opt.value)
 }));
 
+// Helper para crear matriz vacía
+const createEmptyMatrix = (rows: number, cols: number): string[][] => {
+    return Array(rows).fill(Array(cols).fill(""));
+};
+
+// Helper para crear vector vacío
+const createEmptyVector = (size: number): string[] => {
+    return Array(size).fill("");
+};
+
 export default function Matriz() {
   const [rowsA, setRowsA] = useState(2)
   const [colsA, setColsA] = useState(2)
   const [rowsB, setRowsB] = useState(2)
   const [colsB, setColsB] = useState(2)
-  const [matrix, setMatrix] = useState<string[][]>(Array(rowsA).fill(Array(colsA).fill("")))
-  const [matrixB, setMatrixB] = useState<string[][]>(Array(rowsB).fill(Array(colsB).fill("")))
+  const [matrix, setMatrix] = useState<string[][]>(createEmptyMatrix(rowsA, colsA))
+  const [matrixB, setMatrixB] = useState<string[][]>(createEmptyMatrix(rowsB, colsB))
+  const [vectorB, setVectorB] = useState<string[]>(createEmptyVector(rowsA))
   const [matrixCalculated, setMatrixCalculated] = useState<number[][] | null>(null)
   const [matrixBCalculated, setMatrixBCalculated] = useState<number[][] | null>(null)
-  const [result, setResult] = useState<number | number[][] | null>(null)
+  const [vectorBCalculated, setVectorBCalculated] = useState<number[] | null>(null)
+  const [result, setResult] = useState<number | number[][] | number[] | null>(null)
   const [calculationSteps, setCalculationSteps] = useState<string[]>([])
   const [showResult, setShowResult] = useState(false)
   const [selectedOperation, setSelectedOperation] = useState<OperationType>("determinant")
   const [isResizing, setIsResizing] = useState(false)
   const [showMatrixBInput, setShowMatrixBInput] = useState(false)
-  const [decimalPlaces, setDecimalPlaces] = useState(2);
-  const [forceSquare, setForceSquare] = useState(true);
-  const [syncBRowsToACols, setSyncBRowsToACols] = useState(false);
+  const [showVectorBInput, setShowVectorBInput] = useState(false)
+  const [decimalPlaces, setDecimalPlaces] = useState(2)
+  const [forceSquare, setForceSquare] = useState(true)
+  const [syncBRowsToACols, setSyncBRowsToACols] = useState(false)
 
-  const handleRowsAChange = useCallback((newRows: number) => {
-    setRowsA(newRows);
-    if (forceSquare) setColsA(newRows);
-    if (syncBRowsToACols) setRowsB(colsA);
-  }, [forceSquare, syncBRowsToACols, colsA]);
+  const handleSizeChange = useCallback((newSize: number) => {
+    if(newSize >=1 && newSize <= 5) {
+        setRowsA(newSize)
+        setColsA(newSize)
+        if (showVectorBInput) {
+            setVectorB(createEmptyVector(newSize))
+        }
+    }
+  }, [showVectorBInput])
 
-  const handleColsAChange = useCallback((newCols: number) => {
-    setColsA(newCols);
-    if (forceSquare) setRowsA(newCols);
-    if (syncBRowsToACols) setRowsB(newCols);
-  }, [forceSquare, syncBRowsToACols]);
+  const handleRowsAChangeNonSquare = useCallback((newRows: number) => {
+    setRowsA(newRows)
+  }, [])
+
+  const handleColsAChangeNonSquare = useCallback((newCols: number) => {
+    setColsA(newCols)
+    if (syncBRowsToACols) setRowsB(newCols)
+  }, [syncBRowsToACols])
 
   const handleRowsBChange = useCallback((newRows: number) => {
     if (!syncBRowsToACols) {
-        setRowsB(newRows);
+        setRowsB(newRows)
     }
-  }, [syncBRowsToACols]);
+  }, [syncBRowsToACols])
 
   const handleColsBChange = useCallback((newCols: number) => {
-    setColsB(newCols);
-  }, []);
+    setColsB(newCols)
+  }, [])
 
   const handleInputChange = (rowIndex: number, colIndex: number, value: string) => {
     setMatrix(prevMatrix =>
@@ -88,195 +109,235 @@ export default function Matriz() {
     )
   }
 
+  const handleVectorBInputChange = (index: number, value: string) => {
+    setVectorB(prevVector => 
+        prevVector.map((v, i) => (i === index ? value : v))
+    )
+  }
+
   const clearMatrix = () => {
-    setMatrix(Array(rowsA).fill(Array(colsA).fill("")))
-    setMatrixB(Array(rowsB).fill(Array(colsB).fill("")))
+    setMatrix(createEmptyMatrix(rowsA, colsA))
+    setMatrixB(createEmptyMatrix(rowsB, colsB))
+    setVectorB(createEmptyVector(rowsA))
     setResult(null)
     setCalculationSteps([])
     setShowResult(false)
     setMatrixCalculated(null)
     setMatrixBCalculated(null)
+    setVectorBCalculated(null)
   }
 
   const handleCalculate = () => {
-    const operationConfig = EXTENDED_MENU_OPTIONS.find(opt => opt.value === selectedOperation);
+    const operationConfig = EXTENDED_MENU_OPTIONS.find(opt => opt.value === selectedOperation)
     
     if (!operationConfig) {
-        console.error(`Configuración no encontrada para la operación: ${selectedOperation}`);
-        setCalculationSteps([`Error interno: Operación desconocida.`]);
-        setShowResult(true);
-        setResult(null);
-        return;
+        console.error(`Configuración no encontrada para la operación: ${selectedOperation}`)
+        setCalculationSteps([`Error interno: Operación desconocida.`])
+        setShowResult(true)
+        setResult(null)
+        return
     }
 
-    if (operationConfig.requiresSquare && rowsA !== colsA) {
-        setCalculationSteps([`Error: La operación '${operationConfig.label}' requiere una matriz cuadrada (dimensiones A: ${rowsA}x${colsA}).`]);
-        setShowResult(true);
-        setResult(null);
-        return;
+    const N = rowsA
+    if (operationConfig.requiresSquare && N !== colsA) {
+        setCalculationSteps([`Error: La operación '${operationConfig.label}' requiere una matriz cuadrada (dimensiones A: ${rowsA}x${colsA}).`])
+        setShowResult(true)
+        setResult(null)
+        return
     }
-    if (selectedOperation === 'determinant_sarrus' && (rowsA !== 3 || colsA !== 3)) {
-         setCalculationSteps([`Error: La operación '${operationConfig.label}' solo aplica a matrices 3x3 (dimensiones A: ${rowsA}x${colsA}).`]);
-         setShowResult(true);
-         setResult(null);
-         return;
+    if (selectedOperation === 'determinant_sarrus' && N !== 3) {
+         setCalculationSteps([`Error: La operación '${operationConfig.label}' solo aplica a matrices 3x3 (dimensiones A: ${rowsA}x${colsA}).`])
+         setShowResult(true)
+         setResult(null)
+         return
     }
-     if (selectedOperation === 'multiply' && colsA !== rowsB) {
-         setCalculationSteps([`Error: Dimensiones incompatibles para multiplicación. Columnas de A (${colsA}) deben ser igual a filas de B (${rowsB}).`]);
-         setShowResult(true);
-         setResult(null);
-         return;
+    if (selectedOperation === 'multiply' && colsA !== rowsB) {
+         setCalculationSteps([`Error: Dimensiones incompatibles para multiplicación. Columnas de A (${colsA}) deben ser igual a filas de B (${rowsB}).`])
+         setShowResult(true)
+         setResult(null)
+         return
+    }
+    if (selectedOperation === 'cramer' && vectorB.length !== N) {
+        setCalculationSteps([`Error: Vector B debe tener ${N} elementos (dimensiones A: ${rowsA}x${colsA}).`])
+        setShowResult(true)
+        setResult(null)
+        return
     }
 
     const numericMatrix = matrix.map(row => 
       row.map(cell => {
-        const num = parseFloat(cell);
-        return isNaN(num) ? 0 : num;
+        const num = parseFloat(cell)
+        return isNaN(num) ? 0 : num
       })
-    );
+    )
     
-    let numericMatrixB: number[][] | null = null;
+    let numericMatrixB: number[][] | null = null
     if (operationConfig.requiresTwoMatrices) {
         numericMatrixB = matrixB.map(row => 
           row.map(cell => {
-            const num = parseFloat(cell);
-            return isNaN(num) ? 0 : num;
+            const num = parseFloat(cell)
+            return isNaN(num) ? 0 : num
           })
-        );
+        )
     }
 
-    let operationResult: { result: number | number[][]; steps: string[] } | null = null;
+    let numericVectorB: number[] | null = null
+    if (selectedOperation === 'cramer') {
+        numericVectorB = vectorB.map(cell => {
+            const num = parseFloat(cell)
+            return isNaN(num) ? 0 : num
+        })
+    }
+
+    let operationResult: { result: number | number[][] | number[]; steps: string[] } | null = null
     setMatrixCalculated(numericMatrix)
     setMatrixBCalculated(numericMatrixB)
+    setVectorBCalculated(numericVectorB)
 
     try {
       switch (selectedOperation) {
         case "determinant":
           if (numericMatrix.length !== numericMatrix[0]?.length) {
-            console.error("La matriz debe ser cuadrada para calcular el determinante.");
+            console.error("La matriz debe ser cuadrada para calcular el determinante.")
             setCalculationSteps(["Error: La matriz debe ser cuadrada para calcular el determinante."])
             setShowResult(true)
             setResult(null)
             setMatrixCalculated(numericMatrix)
-            return;
+            return
           }
-          const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix, decimalPlaces);
-          operationResult = { result: determinant, steps };
-          break;
+          const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix, decimalPlaces)
+          operationResult = { result: determinant, steps }
+          break
         case "determinant_sarrus":
-          const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix, decimalPlaces);
+          const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix, decimalPlaces)
           if (isNaN(sarrusResult.determinant)) {
-            setCalculationSteps(sarrusResult.steps);
-            operationResult = null;
+            setCalculationSteps(sarrusResult.steps)
+            operationResult = null
           } else {
-            operationResult = { result: sarrusResult.determinant, steps: sarrusResult.steps };
+            operationResult = { result: sarrusResult.determinant, steps: sarrusResult.steps }
           }
-          break;
+          break
         case "multiply":
           if (!numericMatrixB) {
-            console.error("Error interno: Matriz B no está disponible para multiplicación.");
-            setCalculationSteps(["Error interno: Matriz B requerida."]);
-            operationResult = null;
+            console.error("Error interno: Matriz B no está disponible para multiplicación.")
+            setCalculationSteps(["Error interno: Matriz B requerida."])
+            operationResult = null
           } else {
-            const multResult = MatrixOperations.multiplyMatricesWithSteps(numericMatrix, numericMatrixB, decimalPlaces);
+            const multResult = MatrixOperations.multiplyMatricesWithSteps(numericMatrix, numericMatrixB, decimalPlaces)
             if (multResult.result === null) {
-              setCalculationSteps(multResult.steps);
-              operationResult = null;
+              setCalculationSteps(multResult.steps)
+              operationResult = null
             } else {
-              operationResult = { result: multResult.result, steps: multResult.steps };
+              operationResult = { result: multResult.result, steps: multResult.steps }
             }
           }
-          break;
+          break
         case "transpose":
-          const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix, decimalPlaces);
+          const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix, decimalPlaces)
           if (transposeResult.result === null) {
-            setCalculationSteps(transposeResult.steps);
-            operationResult = null;
+            setCalculationSteps(transposeResult.steps)
+            operationResult = null
           } else {
-            operationResult = { result: transposeResult.result, steps: transposeResult.steps };
+            operationResult = { result: transposeResult.result, steps: transposeResult.steps }
           }
-          break;
+          break
         case "adjoint":
-          const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix, decimalPlaces);
+          const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix, decimalPlaces)
           if (adjointResult.result === null) {
-            setCalculationSteps(adjointResult.steps);
-            operationResult = null;
+            setCalculationSteps(adjointResult.steps)
+            operationResult = null
           } else {
-            operationResult = { result: adjointResult.result, steps: adjointResult.steps };
+            operationResult = { result: adjointResult.result, steps: adjointResult.steps }
           }
-          break;
+          break
         case "inverse":
-          const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix, decimalPlaces);
+          const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix, decimalPlaces)
           if (inverseResult.result === null) {
-            setCalculationSteps(inverseResult.steps);
-            operationResult = null;
+            setCalculationSteps(inverseResult.steps)
+            operationResult = null
           } else {
-            operationResult = { result: inverseResult.result, steps: inverseResult.steps };
+            operationResult = { result: inverseResult.result, steps: inverseResult.steps }
           }
-          break;
+          break
         case "sum":
         case "subtract":
-          console.warn(`Operación '${selectedOperation}' no implementada aún.`);
+          console.warn(`Operación '${selectedOperation}' no implementada aún.`)
           setCalculationSteps(["Operación no implementada."])
-          operationResult = null;
-          break;
+          operationResult = null
+          break
+        case "cramer":
+          if (!numericVectorB) {
+            console.error("Error interno: Vector B no disponible para Cramer.")
+            setCalculationSteps(["Error interno: Vector B requerido."])
+            operationResult = null
+          } else {
+            const cramerResult = MatrixOperations.solveByCramerWithSteps(numericMatrix, numericVectorB, decimalPlaces)
+            if (cramerResult.result === null) {
+              setCalculationSteps(cramerResult.steps)
+              operationResult = null
+            } else {
+              operationResult = { result: cramerResult.result, steps: cramerResult.steps }
+            }
+          }
+          break
         default:
-          console.error(`Operación desconocida: ${selectedOperation}`);
+          console.error(`Operación desconocida: ${selectedOperation}`)
           setCalculationSteps([`Error: Operación desconocida '${selectedOperation}'.`])
-          operationResult = null;
+          operationResult = null
       }
 
       if (operationResult) {
-        setResult(operationResult.result);
-        setCalculationSteps(operationResult.steps);
-        setShowResult(true);
+        setResult(operationResult.result)
+        setCalculationSteps(operationResult.steps)
+        setShowResult(true)
       } else {
         setShowResult(true)
         setResult(null)
       }
 
     } catch (error) {
-      console.error("Error durante el cálculo:", error);
+      console.error("Error durante el cálculo:", error)
       setCalculationSteps([`Error inesperado durante el cálculo: ${error instanceof Error ? error.message : String(error)}`])
       setResult(null)
       setShowResult(true)
     }
-  };
+  }
 
   const handleOperationSelect = (operation: OperationType) => {
     setSelectedOperation(operation)
-    const config = EXTENDED_MENU_OPTIONS.find(opt => opt.value === operation);
+    const config = EXTENDED_MENU_OPTIONS.find(opt => opt.value === operation)
     
     if (!config) {
-        console.error(`Configuración no encontrada para la operación seleccionada: ${operation}`);
-        return; 
+        console.error(`Configuración no encontrada para la operación seleccionada: ${operation}`)
+        return 
     }
 
-    const needsSquare = config.requiresSquare ?? false;
-    const needsTwo = config.requiresTwoMatrices ?? false;
-    const isMultiply = operation === 'multiply';
+    const needsSquare = config.requiresSquare ?? false
+    const needsTwoMatrices = config.requiresTwoMatrices ?? false
+    const isMultiply = operation === 'multiply'
+    const isCramer = operation === 'cramer'
 
-    setForceSquare(needsSquare);
-    setShowMatrixBInput(needsTwo);
-    setSyncBRowsToACols(isMultiply);
+    setForceSquare(needsSquare || isCramer)
+    setShowMatrixBInput(needsTwoMatrices && !isCramer)
+    setShowVectorBInput(isCramer)
+    setSyncBRowsToACols(isMultiply)
     setShowResult(false)
     setResult(null)
     setCalculationSteps([])
 
-    if (needsSquare && rowsA !== colsA) {
-        const newSize = Math.max(rowsA, colsA, 2);
-        setRowsA(newSize);
-        setColsA(newSize);
-        if(needsTwo) {
-             setRowsB(newSize);
-             setColsB(newSize);
-        }
+    let currentN = rowsA
+    if (needsSquare || isCramer) {
+        if(rowsA !== colsA) {
+           currentN = Math.max(rowsA, colsA, 2) 
+           setRowsA(currentN)
+           setColsA(currentN)
+        } 
+        if(isCramer && vectorB.length !== currentN) {
+           setVectorB(createEmptyVector(currentN))
+        }        
     } else if (isMultiply) {
-        setRowsB(colsA);
-    } else if (!needsTwo) {
-        // setRowsB(2);
-        // setColsB(2);
-    }
+        setRowsB(colsA)
+    } 
   }
 
   const getSelectedOperationLabel = () => {
@@ -284,10 +345,15 @@ export default function Matriz() {
   }
 
   useEffect(() => {
-    setMatrix(Array.from({ length: rowsA }, () => Array(colsA).fill("")))
-    setMatrixB(Array.from({ length: rowsB }, () => Array(colsB).fill("")))
-    setShowResult(false)
-  }, [rowsA, colsA, rowsB, colsB])
+    setMatrix(createEmptyMatrix(rowsA, colsA))
+    if (showVectorBInput) {
+        setVectorB(createEmptyVector(rowsA))
+    }
+  }, [rowsA, colsA, showVectorBInput])
+
+  useEffect(() => {
+    setMatrixB(createEmptyMatrix(rowsB, colsB))
+  }, [rowsB, colsB])
 
   return (
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 bg-gradient-to-b from-slate-50 to-slate-100">
@@ -353,86 +419,106 @@ export default function Matriz() {
                 {rowsB}×{colsB}
               </motion.div>
             )}
+            {showVectorBInput && (
+              <motion.div 
+                key={`vector-b-${rowsA}`}
+                layout
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className="text-xs text-indigo-700 bg-white px-2 py-1 rounded-md border border-indigo-200"
+              >
+                {rowsA}×1
+              </motion.div>
+            )}
           </div>
 
-          <div className={`grid gap-4 ${showMatrixBInput ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          <div className={`grid gap-4 ${showMatrixBInput || showVectorBInput ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <div className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-center gap-4">
-                <span className="font-medium text-slate-700 self-center">Matriz A:</span>
-                <MatrixDimensionControl 
-                    label="Filas" 
-                    value={rowsA} 
-                    onChange={handleRowsAChange} 
-                    isDisabled={forceSquare && syncBRowsToACols}
-                />
-                <MatrixDimensionControl 
-                    label="Columnas" 
-                    value={colsA} 
-                    onChange={handleColsAChange} 
-                    isDisabled={forceSquare}
-                 />
+                <span className="font-medium text-slate-700 self-center">
+                    {forceSquare || selectedOperation === 'cramer' ? 'Tamaño N:' : 'Matriz A:'}
+                </span>
+                 {(forceSquare || selectedOperation === 'cramer') ? (
+                    <MatrixDimensionControl 
+                        label="N" 
+                        value={rowsA}
+                        onChange={handleSizeChange} 
+                        minValue={2}
+                    />
+                 ) : (<>
+                    <MatrixDimensionControl 
+                        label="Filas A" 
+                        value={rowsA} 
+                        onChange={handleRowsAChangeNonSquare} 
+                    />
+                    <MatrixDimensionControl 
+                        label="Columnas A" 
+                        value={colsA} 
+                        onChange={handleColsAChangeNonSquare} 
+                     />
+                 </>)} 
             </div>
-            {showMatrixBInput && (
+            {showMatrixBInput && !forceSquare && (
                 <div className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-center gap-4">
                     <span className="font-medium text-slate-700 self-center">Matriz B:</span>
-                     <MatrixDimensionControl 
-                        label="Filas" 
-                        value={rowsB} 
-                        onChange={handleRowsBChange} 
-                        isDisabled={syncBRowsToACols || (forceSquare && !syncBRowsToACols)}
-                     />
-                    <MatrixDimensionControl 
-                        label="Columnas" 
-                        value={colsB} 
-                        onChange={handleColsBChange} 
-                        isDisabled={forceSquare && !syncBRowsToACols}
-                    />
+                     <MatrixDimensionControl label="Filas B" value={rowsB} onChange={handleRowsBChange} isDisabled={syncBRowsToACols} />
+                     <MatrixDimensionControl label="Columnas B" value={colsB} onChange={handleColsBChange} />
                 </div>
             )}
           </div>
 
-          <div className={`grid gap-6 ${showMatrixBInput ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
-            <motion.div
-              key={`matrix-a-${rowsA}`}
-              layout
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ 
-                scale: isResizing ? 0.95 : 1, 
-                opacity: isResizing ? 0.5 : 1 
-              }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 500, 
-                damping: 30,
-                duration: 0.3
-              }}
-              className="bg-white rounded-md border border-slate-200 p-4"
+          <div className={`flex flex-wrap justify-center items-center gap-4 md:gap-6 ${(showMatrixBInput || showVectorBInput) ? 'md:flex-nowrap' : ''}`}>
+            <motion.div 
+              key={`matrix-a-${rowsA}`} 
+              layout 
+              className="w-full md:w-auto"
             >
-              <MatrixInput
-                matrix={matrix}
-                onInputChange={handleInputChange}
-                label={`Matriz A (${rowsA}x${colsA})`}
-              />
+               <MatrixInput 
+                   matrix={matrix} 
+                   onInputChange={handleInputChange} 
+                   label={selectedOperation === 'cramer' ? 'Matriz de Coeficientes (A)' : `Matriz A${(forceSquare) ? ` (${rowsA}×${rowsA})` : ` (${rowsA}×${colsA})`}`} 
+               />
             </motion.div>
-
-            <AnimatePresence>
-              {showMatrixBInput && (
-                <motion.div
-                  key={`matrix-b-${rowsB}`}
-                  layout
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  className="bg-white rounded-md border border-slate-200 p-4 relative"
-                >
-                  <MatrixInput
-                    matrix={matrixB}
-                    onInputChange={handleInputChangeB}
-                    label={`Matriz B (${rowsB}x${colsB})`}
-                  />
+            
+            {selectedOperation === 'cramer' && (
+                <motion.div 
+                    key="cramer-separator" 
+                    initial={{ opacity: 0, scale: 0.5 }} 
+                    animate={{ opacity: 1, scale: 1 }} 
+                    className="text-3xl font-bold text-slate-500 px-2"
+                 >
+                   =
                 </motion.div>
-              )}
-            </AnimatePresence>
+            )}
+
+            <AnimatePresence>{showMatrixBInput && !showVectorBInput && (<motion.div 
+                key={`matrix-b-${rowsB}`} 
+                layout 
+                initial={{ opacity: 0, scale: 0.8}} 
+                animate={{ opacity: 1, scale: 1}} 
+                exit={{ opacity: 0, scale: 0.8}} 
+                transition={{ type: "spring", stiffness: 400, damping: 25 }} 
+                className="w-full md:w-auto"
+            > 
+                <MatrixInput matrix={matrixB} onInputChange={handleInputChangeB} label={`Matriz B (${rowsB}x${colsB})`} />
+            </motion.div>)}</AnimatePresence>
+            
+            <AnimatePresence>{showVectorBInput && (<motion.div 
+                key={`vector-b-${rowsA}`} 
+                layout 
+                initial={{ opacity: 0, scale: 0.8}} 
+                animate={{ opacity: 1, scale: 1}} 
+                exit={{ opacity: 0, scale: 0.8}} 
+                transition={{ type: "spring", stiffness: 400, damping: 25 }} 
+                className="w-full md:w-auto"
+            > 
+                <VectorInput 
+                    vector={vectorB} 
+                    onInputChange={handleVectorBInputChange} 
+                    label={`Vector de Resultados (B)`} 
+                />
+            </motion.div>)}</AnimatePresence>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
@@ -461,6 +547,7 @@ export default function Matriz() {
                   steps={calculationSteps}
                   matrix={matrixCalculated ?? undefined}
                   matrixB={matrixBCalculated ?? undefined}
+                  vectorB={vectorBCalculated ?? undefined}
                   type={selectedOperation}
                   decimalPlaces={decimalPlaces}
                 />

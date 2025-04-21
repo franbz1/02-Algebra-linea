@@ -3,10 +3,11 @@ import { OperationType } from "../config/operations"; // Importar OperationType 
 
 interface MatrixResultProps {
   title: string
-  result: number | number[][] | null
+  result: number | number[][] | number[] | null // Permitir number[]
   steps: string[]
   matrix?: number[][] // Matriz original A
   matrixB?: number[][] // Añadir Matriz B opcional
+  vectorB?: number[] | null; // Vector B usado
   type: OperationType
   decimalPlaces: number; // Nueva prop
 }
@@ -49,7 +50,7 @@ const MatrixDisplay = ({ matrixData, decimalPlaces }: { matrixData: number[][], 
   </div>
 );
 
-export function MatrixResult({ title, result, steps, matrix, matrixB, type, decimalPlaces }: MatrixResultProps) {
+export function MatrixResult({ title, result, steps, matrix, matrixB, vectorB, type, decimalPlaces }: MatrixResultProps) {
 
   // Función para generar el texto introductorio según la operación
   const getIntroText = () => {
@@ -149,23 +150,37 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, type, deci
          </div>
       </div>
 
-      {/* Mostrar Matriz(ces) Original(es) */} 
-      {(matrix || matrixB) && (
-         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 bg-slate-50 p-3 rounded-md border border-slate-200">
+      {/* Mostrar Matriz(ces) Original(es) y Vector */} 
+      {(matrix || matrixB || vectorB) && (
+         // Ajustar grid para potencial 3 columnas (A, B matriz, B vector)
+         <div className={`grid gap-4 grid-cols-1 ${matrix && (matrixB || vectorB) ? 'sm:grid-cols-2' : 'sm:grid-cols-1'} bg-slate-50 p-3 rounded-md border border-slate-200 place-items-center`}>
            {matrix && (
-            <div className="text-center">
+            <div className="text-center w-full">
               <h4 className="text-sm font-medium text-slate-700 mb-2">Matriz Original A</h4>
               <div className="flex justify-center">
-                 {/* Mostrar matrices originales con precisión fija (o pasar decimales si se prefiere) */} 
                 <MatrixDisplay matrixData={matrix} decimalPlaces={2} /> 
               </div>
             </div>
            )}
            {matrixB && (
-             <div className="text-center">
+             <div className="text-center w-full">
                <h4 className="text-sm font-medium text-slate-700 mb-2">Matriz Original B</h4>
                <div className="flex justify-center">
                  <MatrixDisplay matrixData={matrixB} decimalPlaces={2} />
+               </div>
+             </div>
+           )}
+           {vectorB && (
+             <div className="text-center w-full sm:col-start-2"> {/* Poner vector en segunda columna si hay matriz A */} 
+               <h4 className="text-sm font-medium text-slate-700 mb-2">Vector Original B</h4>
+               <div className="inline-block bg-gray-100 border border-gray-300 rounded-lg p-2">
+                 {vectorB.map((val, index) => (
+                   <div key={index} className="mb-1 last:mb-0">
+                     <span className="block w-16 text-center p-1 bg-white rounded shadow-sm text-xs sm:text-sm">
+                       {formatNumberForDisplay(val, 2)} 
+                     </span>
+                   </div>
+                 ))}
                </div>
              </div>
            )}

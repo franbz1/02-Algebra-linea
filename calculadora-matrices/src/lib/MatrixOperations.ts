@@ -462,6 +462,95 @@ export class MatrixOperations {
     return { result: inverseMatrix, steps: combinedSteps };
   }
 
+  // --- Cramer --- 
+
+  /**
+   * Resuelve un sistema de ecuaciones lineales Ax = B usando la Regla de Cramer.
+   * @param matrixA Matriz de coeficientes (debe ser cuadrada NxN).
+   * @param vectorB Vector de términos independientes (debe tener N elementos).
+   * @param decimalPlaces Precisión para los pasos.
+   * @returns Objeto con el vector solución [x1, x2,... xn] y los pasos, o null y error.
+   */
+  static solveByCramerWithSteps(matrixA: number[][], vectorB: number[], decimalPlaces: number = 2): { result: number[] | null; steps: string[] } {
+    let steps: string[] = [];
+    const n = matrixA.length;
+
+    steps.push("Resolviendo sistema Ax = B por Regla de Cramer:");
+    steps.push("Matriz de Coeficientes (A):");
+    steps.push(this.matrixToString(matrixA, decimalPlaces));
+    steps.push("Vector de Términos Independientes (B):");
+    steps.push("  [" + vectorB.map(v => formatNumberForSteps(v, decimalPlaces)).join(", ") + "]ᵀ"); // Mostrar como columna transpuesta
+
+    // Validaciones
+    if (n === 0) {
+        steps.push("Error: La matriz A está vacía.");
+        return { result: null, steps };
+    }
+    if (matrixA.some(row => row.length !== n)) {
+        steps.push("Error: La matriz de coeficientes A debe ser cuadrada.");
+        return { result: null, steps };
+    }
+    if (vectorB.length !== n) {
+        steps.push(`Error: El tamaño del vector B (${vectorB.length}) no coincide con las dimensiones de la matriz A (${n}x${n}).`);
+        return { result: null, steps };
+    }
+
+    // Paso 1: Calcular determinante de A
+    steps.push("\n--- Paso 1: Calcular Determinante del Sistema det(A) ---");
+    // Reutilizar la función interna que no genera pasos aquí para no duplicar
+    const detA = this.calculateDeterminant(matrixA, decimalPlaces); 
+    // Mostrar el resultado del cálculo de detA detallado si es necesario (opcional)
+    // const detAResult = this.calculateDeterminantWithSteps(matrixA, decimalPlaces);
+    // steps.push(...detAResult.steps);
+     steps.push(`Determinante del sistema: det(A) = ${formatNumberForSteps(detA, decimalPlaces)}`);
+
+    if (isNaN(detA)) {
+        steps.push("Error calculando el determinante de A.");
+        return { result: null, steps };
+    }
+    if (Math.abs(detA) < 1e-10) {
+        steps.push(`El determinante de A es ${formatNumberForSteps(detA, decimalPlaces)} (cero).`);
+        steps.push("El sistema puede tener infinitas soluciones o ninguna solución (no se puede usar Cramer).");
+        // Podríamos intentar Gauss-Jordan aquí en un futuro
+        return { result: null, steps };
+    }
+    steps.push("det(A) ≠ 0, el sistema tiene solución única.");
+
+    // Paso 2: Calcular determinantes de Ai y las soluciones xi
+    steps.push("\n--- Paso 2: Calcular determinantes det(Ai) y soluciones xi = det(Ai) / det(A) ---");
+    const solution: number[] = [];
+
+    for (let i = 0; i < n; i++) {
+        steps.push(`\n  Calculando para la variable x${i + 1}:`);
+        // Crear matriz Ai reemplazando columna i de A con B
+        const matrixAi = matrixA.map(row => [...row]); // Copiar A
+        for (let k = 0; k < n; k++) {
+            matrixAi[k][i] = vectorB[k];
+        }
+        steps.push(`    Matriz Ai (reemplazando columna ${i + 1} de A con B):`);
+        steps.push(this.matrixToString(matrixAi, decimalPlaces, 6));
+
+        // Calcular det(Ai)
+        const detAi = this.calculateDeterminant(matrixAi, decimalPlaces);
+         steps.push(`    Determinante det(Ai) = ${formatNumberForSteps(detAi, decimalPlaces)}`);
+        if (isNaN(detAi)) {
+            steps.push(`Error calculando det(Ai) para x${i + 1}.`);
+            return { result: null, steps }; // Error fatal
+        }
+
+        // Calcular xi
+        const xi = detAi / detA;
+        solution.push(xi);
+        steps.push(`    Solución x${i + 1} = det(Ai) / det(A) = ${formatNumberForSteps(detAi, decimalPlaces)} / ${formatNumberForSteps(detA, decimalPlaces)} = ${formatNumberForSteps(xi, decimalPlaces)}`);
+    }
+
+    steps.push("\n--- Solución Final ---");
+    steps.push("  X = [" + solution.map(x => formatNumberForSteps(x, decimalPlaces)).join(", ") + "]ᵀ");
+    steps.push("Cálculo completado.");
+
+    return { result: solution, steps };
+  }
+
   // --- Funciones Auxiliares --- 
 
   private static getSubMatrix(matrix: number[][], rowToRemove: number, colToRemove: number): number[][] {
