@@ -26,17 +26,20 @@ const formatNumberForDisplay = (num: number): string => {
 
 // Componente para renderizar una matriz (no editable)
 const MatrixDisplay = ({ matrixData }: { matrixData: number[][] }) => (
-  <div className="font-mono text-sm bg-slate-100 p-2 rounded-md inline-block border border-slate-200">
+  // Permitir que el bloque tome el ancho necesario, centrado si es posible
+  <div className="font-mono text-sm bg-slate-100 p-2 rounded-md inline-block border border-slate-200 max-w-full">
     {matrixData.map((row, i) => (
-      <div key={i} className="flex justify-center gap-1 mb-1 last:mb-0"> {/* Reducir gap */} 
+      // Usar flex-wrap para que las celdas salten de línea si no caben
+      <div key={i} className="flex flex-wrap justify-center gap-1 mb-1 last:mb-0"> 
         {row.map((val, j) => (
           <span 
              key={j} 
-             // Ajustar ancho y padding ligeramente, permitir que el texto se reduzca si es necesario
-             className="w-16 text-center p-1 bg-white rounded shadow-sm text-xs sm:text-sm overflow-hidden text-ellipsis whitespace-nowrap" 
+             // Quitar ancho fijo, usar padding y min-width. 
+             // Permitir que crezca (flex-grow) y se encoja (flex-shrink)
+             className="flex-grow-0 flex-shrink-0 min-w-[4rem] text-center p-1 bg-white rounded shadow-sm text-xs sm:text-sm overflow-hidden text-ellipsis whitespace-nowrap" 
              title={val.toString()} // Mostrar valor completo en tooltip
           >
-            {formatNumberForDisplay(val)} {/* Usar el helper de formato */} 
+            {formatNumberForDisplay(val)} 
           </span>
         ))}
       </div>

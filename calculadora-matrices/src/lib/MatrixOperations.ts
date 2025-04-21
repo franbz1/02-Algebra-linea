@@ -353,6 +353,89 @@ export class MatrixOperations {
     return { result: resultMatrix, steps };
   }
 
+  /**
+   * Calcula la matriz inversa usando el método de la adjunta.
+   * A⁻¹ = (1 / det(A)) * Adj(A)
+   * @param matrix Matriz cuadrada original.
+   * @returns Objeto con la matriz inversa y los pasos, o null y error.
+   */
+  static calculateInverseWithSteps(matrix: number[][]): { result: number[][] | null; steps: string[] } {
+    let combinedSteps: string[] = [];
+    const n = matrix.length;
+
+    combinedSteps.push("Calculando la Matriz Inversa usando el método de la Adjunta:");
+    combinedSteps.push("Fórmula: A⁻¹ = (1 / det(A)) * Adj(A)");
+    combinedSteps.push("Matriz Original (A):");
+    combinedSteps.push(this.matrixToString(matrix));
+
+    if (n === 0) {
+      combinedSteps.push("Error: La matriz está vacía.");
+      return { result: null, steps: combinedSteps };
+    }
+    if (matrix.some(row => row.length !== n)) {
+      combinedSteps.push("Error: La matriz debe ser cuadrada para calcular la inversa.");
+      return { result: null, steps: combinedSteps };
+    }
+
+    // --- Paso 1: Calcular Determinante --- 
+    combinedSteps.push("\n--- Paso 1: Calcular el Determinante de A ---");
+    const detResult = this.calculateDeterminantWithSteps(matrix);
+    combinedSteps.push(...detResult.steps); // Añadir pasos del cálculo del determinante
+    const determinant = detResult.determinant;
+
+    if (isNaN(determinant)) { // Error en cálculo de determinante
+        combinedSteps.push("Error durante el cálculo del determinante.");
+        return { result: null, steps: combinedSteps };
+    }
+    
+    combinedSteps.push(`\nDeterminante calculado: det(A) = ${determinant.toFixed(4)}`);
+
+    // --- Paso 2: Comprobar si el determinante es cero --- 
+    combinedSteps.push("\n--- Paso 2: Comprobar si det(A) ≠ 0 ---");
+    if (Math.abs(determinant) < 1e-10) { // Considerar cero si es muy pequeño (manejo de precisión)
+      combinedSteps.push(`El determinante es ${determinant.toFixed(4)} (considerado cero).`);
+      combinedSteps.push("La matriz es singular, por lo tanto, no tiene inversa.");
+      return { result: null, steps: combinedSteps };
+    } else {
+      combinedSteps.push(`El determinante es ${determinant.toFixed(4)} (diferente de cero). La inversa existe.`);
+    }
+
+    // --- Paso 3: Calcular Matriz Adjunta --- 
+    combinedSteps.push("\n--- Paso 3: Calcular la Matriz Adjunta de A (Adj(A)) ---");
+    const adjResult = this.calculateAdjointWithSteps(matrix);
+    if (!adjResult.result) {
+        // Error ya registrado en los pasos de adjResult
+        combinedSteps.push(...adjResult.steps); 
+        combinedSteps.push("Error durante el cálculo de la matriz adjunta.");
+        return { result: null, steps: combinedSteps };
+    }
+    combinedSteps.push(...adjResult.steps); // Añadir pasos del cálculo de la adjunta
+    const adjointMatrix = adjResult.result;
+    combinedSteps.push("\nMatriz Adjunta calculada (Adj(A)):");
+    combinedSteps.push(this.matrixToString(adjointMatrix));
+
+    // --- Paso 4: Calcular Inversa = (1 / det(A)) * Adj(A) --- 
+    combinedSteps.push(`\n--- Paso 4: Calcular Inversa A⁻¹ = (1 / ${determinant.toFixed(4)}) * Adj(A) ---`);
+    const inverseMatrix: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
+    const invDet = 1 / determinant;
+    combinedSteps.push(`  Multiplicando cada elemento de Adj(A) por (1 / ${determinant.toFixed(4)}) ≈ ${invDet.toExponential(4)}:`);
+
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+            const originalValue = adjointMatrix[i][j];
+            const newValue = invDet * originalValue;
+            inverseMatrix[i][j] = newValue;
+             combinedSteps.push(`  A⁻¹[${i + 1}, ${j + 1}] = ${invDet.toExponential(4)} * ${originalValue.toFixed(4)} = ${newValue.toFixed(4)}`);
+        }
+    }
+
+    combinedSteps.push("\nMatriz Inversa (A⁻¹):");
+    combinedSteps.push(this.matrixToString(inverseMatrix));
+    combinedSteps.push("\nCálculo completado.");
+
+    return { result: inverseMatrix, steps: combinedSteps };
+  }
+
   // --- Funciones Auxiliares --- 
 
   private static getSubMatrix(matrix: number[][], rowToRemove: number, colToRemove: number): number[][] {

@@ -166,6 +166,15 @@ export default function Matriz() {
             operationResult = { result: adjointResult.result, steps: adjointResult.steps };
           }
           break;
+        case "inverse":
+          const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix);
+          if (inverseResult.result === null) {
+            setCalculationSteps(inverseResult.steps);
+            operationResult = null;
+          } else {
+            operationResult = { result: inverseResult.result, steps: inverseResult.steps };
+          }
+          break;
         case "sum":
         case "subtract":
           console.warn(`Operación '${selectedOperation}' no implementada aún.`);
