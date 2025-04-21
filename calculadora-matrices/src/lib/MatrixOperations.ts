@@ -208,11 +208,48 @@ export class MatrixOperations {
     return { result: resultMatrix, steps };
   }
 
+  /**
+   * Calcula la matriz transpuesta de una matriz dada.
+   * @param matrix Matriz de entrada.
+   * @returns Objeto con la matriz transpuesta y los pasos.
+   */
+  static transposeMatrixWithSteps(matrix: number[][]): { result: number[][] | null; steps: string[] } {
+    const rows = matrix.length;
+    const cols = matrix[0]?.length ?? 0;
+    let steps: string[] = [];
+
+    steps.push("Calculando la matriz transpuesta:");
+    steps.push("Matriz Original (A):");
+    steps.push(this.matrixToString(matrix));
+
+    if (rows === 0 || cols === 0) {
+      steps.push("Error: La matriz está vacía.");
+      return { result: null, steps };
+    }
+
+    // La matriz transpuesta tendrá dimensiones cols x rows
+    const resultMatrix: number[][] = Array.from({ length: cols }, () => Array(rows).fill(0));
+    steps.push(`\nLa matriz transpuesta (Aᵀ) tendrá dimensiones ${cols}x${rows}.`);
+    steps.push("Se intercambian las filas por las columnas: Aᵀ[j, i] = A[i, j]");
+
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        resultMatrix[j][i] = matrix[i][j];
+        steps.push(`  Aᵀ[${j + 1}, ${i + 1}] = A[${i + 1}, ${j + 1}] = ${matrix[i][j].toFixed(2)}`);
+      }
+    }
+
+    steps.push("\nMatriz Transpuesta (Aᵀ):");
+    steps.push(this.matrixToString(resultMatrix));
+    steps.push("\nCálculo completado.");
+
+    return { result: resultMatrix, steps };
+  }
+
   // --- Aquí se añadirían otras funciones de cálculo --- 
   // static sumMatrices(matrixA: number[][], matrixB: number[][]): { result: number[][]; steps: string[] } { ... }
   // static subtractMatrices(matrixA: number[][], matrixB: number[][]): { result: number[][]; steps: string[] } { ... }
   // static multiplyMatrices(matrixA: number[][], matrixB: number[][]): { result: number[][]; steps: string[] } { ... }
-  // static transposeMatrix(matrix: number[][]): { result: number[][]; steps: string[] } { ... }
   // static inverseMatrix(matrix: number[][]): { result: number[][]; steps: string[] } { ... }
   // static solveByCramer(matrix: number[][], vector: number[]): { result: number[]; steps: string[] } { ... } 
 } 

@@ -148,6 +148,15 @@ export default function Matriz() {
             }
           }
           break;
+        case "transpose":
+          const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix);
+          if (transposeResult.result === null) {
+            setCalculationSteps(transposeResult.steps);
+            operationResult = null;
+          } else {
+            operationResult = { result: transposeResult.result, steps: transposeResult.steps };
+          }
+          break;
         case "sum":
         case "subtract":
           console.warn(`Operación '${selectedOperation}' no implementada aún.`);
