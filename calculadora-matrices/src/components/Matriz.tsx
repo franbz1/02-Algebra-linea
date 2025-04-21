@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react"
-import { MatrixSizeControls } from "./MatrixSizeControls"
+import { useState, useEffect, useCallback } from "react"
 import { MatrixInput } from "./MatrixInput"
 import { MatrixActions } from "./MatrixActions"
 import { MatrixResult } from "./MatrixResult"
@@ -15,20 +14,26 @@ import { motion, AnimatePresence } from "framer-motion"
 import { MatrixOperations } from "../lib/MatrixOperations"
 import { MENU_OPTIONS, OperationType, OperationOption } from "../config/operations"
 import { DecimalPlacesControl } from "./DecimalPlacesControl"
+import { MatrixDimensionControl } from "./MatrixDimensionControl"
 
 interface ExtendedOperationOption extends OperationOption {
+  requiresSquare?: boolean;
   requiresTwoMatrices?: boolean;
 }
 
 const EXTENDED_MENU_OPTIONS: ExtendedOperationOption[] = MENU_OPTIONS.map(opt => ({
   ...opt,
+  requiresSquare: ["determinant", "determinant_sarrus", "adjoint", "inverse"].includes(opt.value),
   requiresTwoMatrices: ["sum", "subtract", "multiply"].includes(opt.value)
 }));
 
 export default function Matriz() {
-  const [size, setSize] = useState(2)
-  const [matrix, setMatrix] = useState<string[][]>(Array(size).fill(Array(size).fill("")))
-  const [matrixB, setMatrixB] = useState<string[][]>(Array(size).fill(Array(size).fill("")))
+  const [rowsA, setRowsA] = useState(2)
+  const [colsA, setColsA] = useState(2)
+  const [rowsB, setRowsB] = useState(2)
+  const [colsB, setColsB] = useState(2)
+  const [matrix, setMatrix] = useState<string[][]>(Array(rowsA).fill(Array(colsA).fill("")))
+  const [matrixB, setMatrixB] = useState<string[][]>(Array(rowsB).fill(Array(colsB).fill("")))
   const [matrixCalculated, setMatrixCalculated] = useState<number[][] | null>(null)
   const [matrixBCalculated, setMatrixBCalculated] = useState<number[][] | null>(null)
   const [result, setResult] = useState<number | number[][] | null>(null)
@@ -38,26 +43,30 @@ export default function Matriz() {
   const [isResizing, setIsResizing] = useState(false)
   const [showMatrixBInput, setShowMatrixBInput] = useState(false)
   const [decimalPlaces, setDecimalPlaces] = useState(2);
+  const [forceSquare, setForceSquare] = useState(true);
+  const [syncBRowsToACols, setSyncBRowsToACols] = useState(false);
 
-  const increaseSize = () => {
-    if (size < 5) {
-      setIsResizing(true)
-      setTimeout(() => {
-        setSize(size + 1)
-        setIsResizing(false)
-      }, 150)
-    }
-  }
+  const handleRowsAChange = useCallback((newRows: number) => {
+    setRowsA(newRows);
+    if (forceSquare) setColsA(newRows);
+    if (syncBRowsToACols) setRowsB(colsA);
+  }, [forceSquare, syncBRowsToACols, colsA]);
 
-  const decreaseSize = () => {
-    if (size > 2) {
-      setIsResizing(true)
-      setTimeout(() => {
-        setSize(size - 1)
-        setIsResizing(false)
-      }, 150)
+  const handleColsAChange = useCallback((newCols: number) => {
+    setColsA(newCols);
+    if (forceSquare) setRowsA(newCols);
+    if (syncBRowsToACols) setRowsB(newCols);
+  }, [forceSquare, syncBRowsToACols]);
+
+  const handleRowsBChange = useCallback((newRows: number) => {
+    if (!syncBRowsToACols) {
+        setRowsB(newRows);
     }
-  }
+  }, [syncBRowsToACols]);
+
+  const handleColsBChange = useCallback((newCols: number) => {
+    setColsB(newCols);
+  }, []);
 
   const handleInputChange = (rowIndex: number, colIndex: number, value: string) => {
     setMatrix(prevMatrix =>
@@ -80,8 +89,8 @@ export default function Matriz() {
   }
 
   const clearMatrix = () => {
-    setMatrix(Array(size).fill(Array(size).fill("")))
-    setMatrixB(Array(size).fill(Array(size).fill("")))
+    setMatrix(Array(rowsA).fill(Array(colsA).fill("")))
+    setMatrixB(Array(rowsB).fill(Array(colsB).fill("")))
     setResult(null)
     setCalculationSteps([])
     setShowResult(false)
@@ -90,6 +99,35 @@ export default function Matriz() {
   }
 
   const handleCalculate = () => {
+    const operationConfig = EXTENDED_MENU_OPTIONS.find(opt => opt.value === selectedOperation);
+    
+    if (!operationConfig) {
+        console.error(`Configuración no encontrada para la operación: ${selectedOperation}`);
+        setCalculationSteps([`Error interno: Operación desconocida.`]);
+        setShowResult(true);
+        setResult(null);
+        return;
+    }
+
+    if (operationConfig.requiresSquare && rowsA !== colsA) {
+        setCalculationSteps([`Error: La operación '${operationConfig.label}' requiere una matriz cuadrada (dimensiones A: ${rowsA}x${colsA}).`]);
+        setShowResult(true);
+        setResult(null);
+        return;
+    }
+    if (selectedOperation === 'determinant_sarrus' && (rowsA !== 3 || colsA !== 3)) {
+         setCalculationSteps([`Error: La operación '${operationConfig.label}' solo aplica a matrices 3x3 (dimensiones A: ${rowsA}x${colsA}).`]);
+         setShowResult(true);
+         setResult(null);
+         return;
+    }
+     if (selectedOperation === 'multiply' && colsA !== rowsB) {
+         setCalculationSteps([`Error: Dimensiones incompatibles para multiplicación. Columnas de A (${colsA}) deben ser igual a filas de B (${rowsB}).`]);
+         setShowResult(true);
+         setResult(null);
+         return;
+    }
+
     const numericMatrix = matrix.map(row => 
       row.map(cell => {
         const num = parseFloat(cell);
@@ -98,8 +136,7 @@ export default function Matriz() {
     );
     
     let numericMatrixB: number[][] | null = null;
-    const operationConfig = EXTENDED_MENU_OPTIONS.find(opt => opt.value === selectedOperation);
-    if (operationConfig?.requiresTwoMatrices) {
+    if (operationConfig.requiresTwoMatrices) {
         numericMatrixB = matrixB.map(row => 
           row.map(cell => {
             const num = parseFloat(cell);
@@ -208,11 +245,38 @@ export default function Matriz() {
 
   const handleOperationSelect = (operation: OperationType) => {
     setSelectedOperation(operation)
+    const config = EXTENDED_MENU_OPTIONS.find(opt => opt.value === operation);
+    
+    if (!config) {
+        console.error(`Configuración no encontrada para la operación seleccionada: ${operation}`);
+        return; 
+    }
+
+    const needsSquare = config.requiresSquare ?? false;
+    const needsTwo = config.requiresTwoMatrices ?? false;
+    const isMultiply = operation === 'multiply';
+
+    setForceSquare(needsSquare);
+    setShowMatrixBInput(needsTwo);
+    setSyncBRowsToACols(isMultiply);
     setShowResult(false)
     setResult(null)
     setCalculationSteps([])
-    const operationConfig = EXTENDED_MENU_OPTIONS.find(opt => opt.value === operation);
-    setShowMatrixBInput(operationConfig?.requiresTwoMatrices ?? false);
+
+    if (needsSquare && rowsA !== colsA) {
+        const newSize = Math.max(rowsA, colsA, 2);
+        setRowsA(newSize);
+        setColsA(newSize);
+        if(needsTwo) {
+             setRowsB(newSize);
+             setColsB(newSize);
+        }
+    } else if (isMultiply) {
+        setRowsB(colsA);
+    } else if (!needsTwo) {
+        // setRowsB(2);
+        // setColsB(2);
+    }
   }
 
   const getSelectedOperationLabel = () => {
@@ -220,10 +284,10 @@ export default function Matriz() {
   }
 
   useEffect(() => {
-    setMatrix(Array.from({ length: size }, () => Array(size).fill("")))
-    setMatrixB(Array.from({ length: size }, () => Array(size).fill("")))
+    setMatrix(Array.from({ length: rowsA }, () => Array(colsA).fill("")))
+    setMatrixB(Array.from({ length: rowsB }, () => Array(colsB).fill("")))
     setShowResult(false)
-  }, [size])
+  }, [rowsA, colsA, rowsB, colsB])
 
   return (
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 bg-gradient-to-b from-slate-50 to-slate-100">
@@ -270,27 +334,65 @@ export default function Matriz() {
               <span className="text-sm font-medium text-indigo-700">{getSelectedOperationLabel()}</span>
             </div>
             <motion.div 
-              key={size}
+              key={rowsA}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
               className="text-xs text-indigo-700 bg-white px-2 py-1 rounded-md border border-indigo-200"
             >
-              {size}×{size}
+              {rowsA}×{colsA}
             </motion.div>
+            {showMatrixBInput && (
+              <motion.div 
+                key={rowsB}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="text-xs text-indigo-700 bg-white px-2 py-1 rounded-md border border-indigo-200"
+              >
+                {rowsB}×{colsB}
+              </motion.div>
+            )}
           </div>
 
-          <div>
-            <MatrixSizeControls
-              size={size}
-              onIncrease={increaseSize}
-              onDecrease={decreaseSize}
-            />
+          <div className={`grid gap-4 ${showMatrixBInput ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-center gap-4">
+                <span className="font-medium text-slate-700 self-center">Matriz A:</span>
+                <MatrixDimensionControl 
+                    label="Filas" 
+                    value={rowsA} 
+                    onChange={handleRowsAChange} 
+                    isDisabled={forceSquare && syncBRowsToACols}
+                />
+                <MatrixDimensionControl 
+                    label="Columnas" 
+                    value={colsA} 
+                    onChange={handleColsAChange} 
+                    isDisabled={forceSquare}
+                 />
+            </div>
+            {showMatrixBInput && (
+                <div className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-center gap-4">
+                    <span className="font-medium text-slate-700 self-center">Matriz B:</span>
+                     <MatrixDimensionControl 
+                        label="Filas" 
+                        value={rowsB} 
+                        onChange={handleRowsBChange} 
+                        isDisabled={syncBRowsToACols || (forceSquare && !syncBRowsToACols)}
+                     />
+                    <MatrixDimensionControl 
+                        label="Columnas" 
+                        value={colsB} 
+                        onChange={handleColsBChange} 
+                        isDisabled={forceSquare && !syncBRowsToACols}
+                    />
+                </div>
+            )}
           </div>
 
           <div className={`grid gap-6 ${showMatrixBInput ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
             <motion.div
-              key={`matrix-a-${size}`}
+              key={`matrix-a-${rowsA}`}
               layout
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ 
@@ -308,14 +410,14 @@ export default function Matriz() {
               <MatrixInput
                 matrix={matrix}
                 onInputChange={handleInputChange}
-                label="Matriz A"
+                label={`Matriz A (${rowsA}x${colsA})`}
               />
             </motion.div>
 
             <AnimatePresence>
               {showMatrixBInput && (
                 <motion.div
-                  key={`matrix-b-${size}`}
+                  key={`matrix-b-${rowsB}`}
                   layout
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -326,7 +428,7 @@ export default function Matriz() {
                   <MatrixInput
                     matrix={matrixB}
                     onInputChange={handleInputChangeB}
-                    label="Matriz B"
+                    label={`Matriz B (${rowsB}x${colsB})`}
                   />
                 </motion.div>
               )}
