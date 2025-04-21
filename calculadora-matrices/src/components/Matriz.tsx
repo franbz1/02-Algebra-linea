@@ -14,6 +14,7 @@ import { Menu, Calculator, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { MatrixOperations } from "../lib/MatrixOperations"
 import { MENU_OPTIONS, OperationType, OperationOption } from "../config/operations"
+import { DecimalPlacesControl } from "./DecimalPlacesControl"
 
 interface ExtendedOperationOption extends OperationOption {
   requiresTwoMatrices?: boolean;
@@ -36,6 +37,7 @@ export default function Matriz() {
   const [selectedOperation, setSelectedOperation] = useState<OperationType>("determinant")
   const [isResizing, setIsResizing] = useState(false)
   const [showMatrixBInput, setShowMatrixBInput] = useState(false)
+  const [decimalPlaces, setDecimalPlaces] = useState(2);
 
   const increaseSize = () => {
     if (size < 5) {
@@ -121,11 +123,11 @@ export default function Matriz() {
             setMatrixCalculated(numericMatrix)
             return;
           }
-          const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix);
+          const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix, decimalPlaces);
           operationResult = { result: determinant, steps };
           break;
         case "determinant_sarrus":
-          const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix);
+          const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix, decimalPlaces);
           if (isNaN(sarrusResult.determinant)) {
             setCalculationSteps(sarrusResult.steps);
             operationResult = null;
@@ -139,7 +141,7 @@ export default function Matriz() {
             setCalculationSteps(["Error interno: Matriz B requerida."]);
             operationResult = null;
           } else {
-            const multResult = MatrixOperations.multiplyMatricesWithSteps(numericMatrix, numericMatrixB);
+            const multResult = MatrixOperations.multiplyMatricesWithSteps(numericMatrix, numericMatrixB, decimalPlaces);
             if (multResult.result === null) {
               setCalculationSteps(multResult.steps);
               operationResult = null;
@@ -149,7 +151,7 @@ export default function Matriz() {
           }
           break;
         case "transpose":
-          const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix);
+          const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix, decimalPlaces);
           if (transposeResult.result === null) {
             setCalculationSteps(transposeResult.steps);
             operationResult = null;
@@ -158,7 +160,7 @@ export default function Matriz() {
           }
           break;
         case "adjoint":
-          const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix);
+          const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix, decimalPlaces);
           if (adjointResult.result === null) {
             setCalculationSteps(adjointResult.steps);
             operationResult = null;
@@ -167,7 +169,7 @@ export default function Matriz() {
           }
           break;
         case "inverse":
-          const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix);
+          const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix, decimalPlaces);
           if (inverseResult.result === null) {
             setCalculationSteps(inverseResult.steps);
             operationResult = null;
@@ -331,7 +333,11 @@ export default function Matriz() {
             </AnimatePresence>
           </div>
 
-          <div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+            <DecimalPlacesControl 
+              value={decimalPlaces}
+              onChange={setDecimalPlaces}
+            />
             <MatrixActions
               onClear={clearMatrix}
               onCalculate={handleCalculate}
@@ -354,6 +360,7 @@ export default function Matriz() {
                   matrix={matrixCalculated ?? undefined}
                   matrixB={matrixBCalculated ?? undefined}
                   type={selectedOperation}
+                  decimalPlaces={decimalPlaces}
                 />
               </motion.div>
             )}

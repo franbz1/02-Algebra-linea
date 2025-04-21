@@ -8,38 +8,40 @@ interface MatrixResultProps {
   matrix?: number[][] // Matriz original A
   matrixB?: number[][] // Añadir Matriz B opcional
   type: OperationType
+  decimalPlaces: number; // Nueva prop
 }
 
 // Helper para formatear números para mostrar en celdas
-const formatNumberForDisplay = (num: number): string => {
+const formatNumberForDisplay = (num: number, decimals: number): string => {
   if (isNaN(num) || !isFinite(num)) {
-    return num.toString(); // Mostrar NaN, Infinity, -Infinity tal cual
+    return num.toString();
   }
   const absNum = Math.abs(num);
-  // Usar notación exponencial para números muy grandes o muy pequeños (fuera de ~0.01 a ~1,000,000)
-  if (absNum > 1e6 || (absNum < 1e-2 && absNum !== 0)) {
-    return num.toExponential(2);
+  
+  // Determinar umbrales basados en decimales (aproximado)
+  const lowerThreshold = Math.pow(10, -decimals);
+  const upperThreshold = Math.pow(10, 6); // Mantener umbral superior fijo o ajustarlo si se desea
+
+  if (absNum > upperThreshold || (absNum < lowerThreshold && absNum !== 0)) {
+    // Usar el número de decimales también para la notación exponencial
+    return num.toExponential(decimals);
   } 
-  // Usar formato fijo para números en rango "normal"
-  return num.toFixed(2);
+  // Usar el número de decimales solicitado para toFixed
+  return num.toFixed(decimals);
 };
 
 // Componente para renderizar una matriz (no editable)
-const MatrixDisplay = ({ matrixData }: { matrixData: number[][] }) => (
-  // Permitir que el bloque tome el ancho necesario, centrado si es posible
+const MatrixDisplay = ({ matrixData, decimalPlaces }: { matrixData: number[][], decimalPlaces: number }) => (
   <div className="font-mono text-sm bg-slate-100 p-2 rounded-md inline-block border border-slate-200 max-w-full">
     {matrixData.map((row, i) => (
-      // Usar flex-wrap para que las celdas salten de línea si no caben
       <div key={i} className="flex flex-wrap justify-center gap-1 mb-1 last:mb-0"> 
         {row.map((val, j) => (
           <span 
              key={j} 
-             // Quitar ancho fijo, usar padding y min-width. 
-             // Permitir que crezca (flex-grow) y se encoja (flex-shrink)
              className="flex-grow-0 flex-shrink-0 min-w-[4rem] text-center p-1 bg-white rounded shadow-sm text-xs sm:text-sm overflow-hidden text-ellipsis whitespace-nowrap" 
-             title={val.toString()} // Mostrar valor completo en tooltip
+             title={val.toString()} 
           >
-            {formatNumberForDisplay(val)} 
+            {formatNumberForDisplay(val, decimalPlaces)} {/* Pasar decimales */} 
           </span>
         ))}
       </div>
@@ -47,7 +49,7 @@ const MatrixDisplay = ({ matrixData }: { matrixData: number[][] }) => (
   </div>
 );
 
-export function MatrixResult({ title, result, steps, matrix, matrixB, type }: MatrixResultProps) {
+export function MatrixResult({ title, result, steps, matrix, matrixB, type, decimalPlaces }: MatrixResultProps) {
 
   // Función para generar el texto introductorio según la operación
   const getIntroText = () => {
@@ -87,9 +89,10 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, type }: Ma
       case "determinant":
       case "determinant_sarrus":
         if (typeof result === "number") {
-          return <span className="text-2xl font-bold text-emerald-600">{result}</span>;
+           // Usar formatNumberForDisplay aquí también para consistencia
+          return <span className="text-2xl font-bold text-emerald-600">{formatNumberForDisplay(result, decimalPlaces)}</span>;
         } 
-        break; // Salir si el tipo de resultado no coincide
+        break;
 
       case "sum":
       case "subtract":
@@ -98,29 +101,35 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, type }: Ma
       case "adjoint":
       case "inverse":
         if (Array.isArray(result) && Array.isArray(result[0])) {
-          // Resultado esperado: Matriz
-          return <MatrixDisplay matrixData={result as number[][]} />;
+          return <MatrixDisplay matrixData={result as number[][]} decimalPlaces={decimalPlaces} />; // Pasar decimales
         }
-        break; // Salir si el tipo de resultado no coincide
+        break;
 
       case "cramer":
-         if (Array.isArray(result)) {
-           // Resultado esperado: Vector (array de números) o array vacío
-           const solutionVector = result.flat() as number[];
+         // Verificar explícitamente que es un array y NO un array de arrays
+         if (Array.isArray(result) && (result.length === 0 || !Array.isArray(result[0])) ) {
+           // Forzar conversión a unknown primero, como último recurso para el linter
+           const solutionVector = result as unknown as number[]; 
            return (
-             <div className="font-mono text-lg font-medium text-rose-600 flex gap-4 items-center bg-rose-50 p-3 rounded-md border border-rose-200">
+             <div className="font-mono text-lg font-medium text-rose-600 flex gap-4 items-center bg-rose-50 p-3 rounded-md border border-rose-200 flex-wrap justify-center">
                <span>[</span>
-                {solutionVector.length > 0
+                {solutionVector.length > 0 
                   ? solutionVector.map((val, index) => (
-                      <span key={index}>{`x${index + 1}=${isNaN(val) || !isFinite(val) ? val.toString() : val}`}</span>
-                    )).join(", ")
+                      <span key={index} className="px-1">
+                        {`x${index + 1}=${formatNumberForDisplay(val, decimalPlaces)}`}
+                      </span>
+                    )).reduce((prev, curr, index) => [
+                         ...(Array.isArray(prev) ? prev : [prev]), 
+                         (index > 0 ? <span key={`sep-${index}`}>, </span> : null), 
+                         curr
+                        ], [] as React.ReactNode[])
                   : <span className="text-sm text-gray-500">Sin solución o infinitas soluciones</span>
                 }
                <span>]</span>
              </div>
            );
          }
-         break; // Salir si el tipo de resultado no coincide
+         break;
     }
 
     // Si el tipo de resultado no coincide con lo esperado para la operación
@@ -147,7 +156,8 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, type }: Ma
             <div className="text-center">
               <h4 className="text-sm font-medium text-slate-700 mb-2">Matriz Original A</h4>
               <div className="flex justify-center">
-                <MatrixDisplay matrixData={matrix} />
+                 {/* Mostrar matrices originales con precisión fija (o pasar decimales si se prefiere) */} 
+                <MatrixDisplay matrixData={matrix} decimalPlaces={2} /> 
               </div>
             </div>
            )}
@@ -155,7 +165,7 @@ export function MatrixResult({ title, result, steps, matrix, matrixB, type }: Ma
              <div className="text-center">
                <h4 className="text-sm font-medium text-slate-700 mb-2">Matriz Original B</h4>
                <div className="flex justify-center">
-                 <MatrixDisplay matrixData={matrixB} />
+                 <MatrixDisplay matrixData={matrixB} decimalPlaces={2} />
                </div>
              </div>
            )}

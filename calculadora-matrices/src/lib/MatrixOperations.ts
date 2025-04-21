@@ -1,11 +1,28 @@
+// Helper interno para formatear números en los pasos
+const formatNumberForSteps = (num: number, decimals: number): string => {
+  if (isNaN(num) || !isFinite(num)) return num.toString();
+  const absNum = Math.abs(num);
+  
+  // Usar umbral dinámico, igual que en formatNumberForDisplay
+  const lowerThreshold = Math.pow(10, -decimals);
+  const upperThreshold = 1e7; // Mantener umbral superior (o ajustarlo si se prefiere)
+
+  // Usar exponencial si es muy grande/pequeño para evitar strings largos en los pasos
+  if (absNum > upperThreshold || (absNum < lowerThreshold && absNum !== 0)) {
+    return num.toExponential(decimals);
+  } 
+  return num.toFixed(decimals);
+};
+
 export class MatrixOperations {
   /**
    * Calcula el determinante de una matriz cuadrada utilizando el método de expansión por cofactores
    * y registra los pasos del cálculo.
    * @param matrix Matriz cuadrada de entrada (array de arrays de números).
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns Un objeto que contiene el determinante y los pasos del cálculo.
    */
-  static calculateDeterminantWithSteps(matrix: number[][]): { determinant: number; steps: string[] } {
+  static calculateDeterminantWithSteps(matrix: number[][], decimalPlaces: number = 2): { determinant: number; steps: string[] } {
     let steps: string[] = [];
     const n = matrix.length;
 
@@ -15,10 +32,10 @@ export class MatrixOperations {
     }
 
     steps.push(`Calculando el determinante de la matriz ${n}x${n} (método cofactores):`);
-    steps.push(this.matrixToString(matrix));
+    steps.push(this.matrixToString(matrix, decimalPlaces, 4));
 
-    const determinant = this.calculateDeterminantRecursive(matrix, steps, true); // Pasar true para generar pasos
-    steps.push(`\nResultado final: El determinante es ${determinant}.`);
+    const determinant = this.calculateDeterminantRecursive(matrix, steps, true, decimalPlaces, 0);
+    steps.push(`\nResultado final: El determinante es ${formatNumberForSteps(determinant, decimalPlaces)}.`);
     
     return { determinant, steps };
   }
@@ -29,16 +46,17 @@ export class MatrixOperations {
    * @param matrix Matriz actual.
    * @param steps Array para almacenar los pasos (si generateSteps es true).
    * @param generateSteps Indica si se deben añadir pasos detallados al array `steps`.
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @param level Nivel de indentación para los pasos.
    * @returns El valor del determinante.
    */
-  private static calculateDeterminantRecursive(matrix: number[][], steps: string[], generateSteps: boolean, level = 0): number {
+  private static calculateDeterminantRecursive(matrix: number[][], steps: string[], generateSteps: boolean, decimalPlaces: number, level = 0): number {
     const n = matrix.length;
     const indent = ' '.repeat(level * 2);
 
     if (n === 1) {
       const value = matrix[0][0];
-      if (generateSteps) steps.push(`${indent}  Determinante de matriz 1x1 [[${value}]]: ${value}`);
+      if (generateSteps) steps.push(`${indent}  Determinante de matriz 1x1 [[${formatNumberForSteps(value, decimalPlaces)}]]: ${formatNumberForSteps(value, decimalPlaces)}`);
       return value;
     }
 
@@ -46,7 +64,7 @@ export class MatrixOperations {
       const [a, b] = matrix[0];
       const [c, d] = matrix[1];
       const det = a * d - b * c;
-      if (generateSteps) steps.push(`${indent}  Determinante de matriz 2x2 [[${a.toFixed(2)}, ${b.toFixed(2)}], [${c.toFixed(2)}, ${d.toFixed(2)}]]: (${a.toFixed(2)} * ${d.toFixed(2)}) - (${b.toFixed(2)} * ${c.toFixed(2)}) = ${det.toFixed(4)}`);
+      if (generateSteps) steps.push(`${indent}  Determinante de matriz 2x2 [[${formatNumberForSteps(a, decimalPlaces)}, ${formatNumberForSteps(b, decimalPlaces)}], [${formatNumberForSteps(c, decimalPlaces)}, ${formatNumberForSteps(d, decimalPlaces)}]]: (${formatNumberForSteps(a, decimalPlaces)} * ${formatNumberForSteps(d, decimalPlaces)}) - (${formatNumberForSteps(b, decimalPlaces)} * ${formatNumberForSteps(c, decimalPlaces)}) = ${formatNumberForSteps(det, decimalPlaces)}`);
       return det;
     }
 
@@ -56,38 +74,39 @@ export class MatrixOperations {
     for (let j = 0; j < n; j++) {
       const cofactorSign = Math.pow(-1, j);
       const element = matrix[0][j];
-      if (generateSteps) steps.push(`${indent}    Elemento (${0}, ${j}): ${element.toFixed(2)}, Signo: ${cofactorSign > 0 ? '+' : '-'}`);
+      if (generateSteps) steps.push(`${indent}    Elemento (${0}, ${j}): ${formatNumberForSteps(element, decimalPlaces)}, Signo: ${cofactorSign > 0 ? '+' : '-'}`);
 
       if (element !== 0) {
         const subMatrix = this.getSubMatrix(matrix, 0, j);
         if (generateSteps) {
             steps.push(`${indent}      Submatriz para el elemento (${0}, ${j}):`);
-            steps.push(this.matrixToString(subMatrix, level * 2 + 8));
+            steps.push(this.matrixToString(subMatrix, decimalPlaces, level * 2 + 8));
         }
-        // Llamada recursiva SIN generar pasos detallados de la sub-recursión si ya estamos generando pasos
-        const subDeterminant = this.calculateDeterminantRecursive(subMatrix, steps, false, level + 1); 
+        // Llamada recursiva SIN generar pasos detallados, PERO pasando decimales por si acaso (aunque no se usen si generateSteps=false)
+        const subDeterminant = this.calculateDeterminantRecursive(subMatrix, steps, false, decimalPlaces, level + 1); 
         const term = cofactorSign * element * subDeterminant;
-        if (generateSteps) steps.push(`${indent}      SubDeterminante: ${subDeterminant.toFixed(4)}`);
-        if (generateSteps) steps.push(`${indent}      Término ${j + 1}: (${cofactorSign > 0 ? '+' : '-'}1) * ${element.toFixed(2)} * ${subDeterminant.toFixed(4)} = ${term.toFixed(4)}`);
+        if (generateSteps) steps.push(`${indent}      SubDeterminante: ${formatNumberForSteps(subDeterminant, decimalPlaces)}`);
+        if (generateSteps) steps.push(`${indent}      Término ${j + 1}: (${cofactorSign > 0 ? '+' : '-'}1) * ${formatNumberForSteps(element, decimalPlaces)} * ${formatNumberForSteps(subDeterminant, decimalPlaces)} = ${formatNumberForSteps(term, decimalPlaces)}`);
         determinant += term;
       } else {
         if (generateSteps) steps.push(`${indent}      Término ${j + 1}: 0 (elemento es 0)`);
       }
     }
-    if (generateSteps) steps.push(`${indent}  Suma de los términos para la matriz ${n}x${n}: ${determinant.toFixed(4)}`);
+    if (generateSteps) steps.push(`${indent}  Suma de los términos para la matriz ${n}x${n}: ${formatNumberForSteps(determinant, decimalPlaces)}`);
     return determinant;
   }
   
   /**
    * Calcula el determinante de una matriz (sin generar pasos).
    * @param matrix Matriz cuadrada.
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns El determinante, o NaN si no es cuadrada.
    */
-   static calculateDeterminant(matrix: number[][]): number {
+   static calculateDeterminant(matrix: number[][], decimalPlaces: number = 2): number {
      const n = matrix.length;
      if (n === 0) return 0;
      if (matrix.some(row => row.length !== n)) return NaN; 
-     return this.calculateDeterminantRecursive(matrix, [], false); // No generar pasos
+     return this.calculateDeterminantRecursive(matrix, [], false, decimalPlaces);
    }
 
   // --- Cálculo de Cofactor y Adjunta --- 
@@ -98,14 +117,15 @@ export class MatrixOperations {
    * @param matrix Matriz original.
    * @param row Índice de fila del elemento (basado en 0).
    * @param col Índice de columna del elemento (basado en 0).
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns El valor del cofactor.
    */
-  private static getCofactor(matrix: number[][], row: number, col: number): number {
+  private static getCofactor(matrix: number[][], row: number, col: number, decimalPlaces: number): number {
       const n = matrix.length;
       if (n === 0 || matrix.some(r => r.length !== n)) return NaN; // No es cuadrada
       
       const subMatrix = this.getSubMatrix(matrix, row, col);
-      const minorDeterminant = this.calculateDeterminant(subMatrix);
+      const minorDeterminant = this.calculateDeterminant(subMatrix, decimalPlaces);
       const sign = Math.pow(-1, row + col);
       
       return sign * minorDeterminant;
@@ -115,9 +135,10 @@ export class MatrixOperations {
    * Calcula la matriz de cofactores de una matriz dada.
    * @param matrix Matriz cuadrada original.
    * @param steps Array para añadir los pasos del cálculo.
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns La matriz de cofactores, o null si la matriz no es cuadrada.
    */
-  private static getMatrixOfCofactors(matrix: number[][], steps: string[]): number[][] | null {
+  private static getMatrixOfCofactors(matrix: number[][], steps: string[], decimalPlaces: number): number[][] | null {
       const n = matrix.length;
       if (n === 0) {
           steps.push("Error: La matriz está vacía.");
@@ -134,7 +155,7 @@ export class MatrixOperations {
 
       for (let i = 0; i < n; i++) {
           for (let j = 0; j < n; j++) {
-              const cofactor = this.getCofactor(matrix, i, j);
+              const cofactor = this.getCofactor(matrix, i, j, decimalPlaces);
               if (isNaN(cofactor)) {
                   steps.push(`Error calculando cofactor en [${i + 1}, ${j + 1}]`);
                   return null; // Error interno
@@ -142,26 +163,27 @@ export class MatrixOperations {
               cofactorMatrix[i][j] = cofactor;
               const sign = Math.pow(-1, i + j);
               // Detalle opcional del cálculo del cofactor (puede ser muy verboso)
-              steps.push(`  C[${i + 1}, ${j + 1}] = (${sign > 0 ? '+':'-'}1) * det(SubMatriz(${i + 1}, ${j + 1})) = ${cofactor.toFixed(4)}`);
+              steps.push(`  C[${i + 1}, ${j + 1}] = (${sign > 0 ? '+':'-'}1) * det(SubMatriz(${i + 1}, ${j + 1})) = ${formatNumberForSteps(cofactor, decimalPlaces)}`);
           }
       }
        steps.push("\nMatriz de Cofactores (C):");
-       steps.push(this.matrixToString(cofactorMatrix));
+       steps.push(this.matrixToString(cofactorMatrix, decimalPlaces));
       return cofactorMatrix;
   }
 
    /**
    * Calcula la matriz adjunta (transpuesta de la matriz de cofactores).
    * @param matrix Matriz cuadrada original.
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns Objeto con la matriz adjunta y los pasos, o null y error.
    */
-  static calculateAdjointWithSteps(matrix: number[][]): { result: number[][] | null; steps: string[] } {
+  static calculateAdjointWithSteps(matrix: number[][], decimalPlaces: number = 2): { result: number[][] | null; steps: string[] } {
       let steps: string[] = [];
       steps.push("Calculando la Matriz Adjunta:");
       steps.push("Matriz Original (A):");
-      steps.push(this.matrixToString(matrix));
+      steps.push(this.matrixToString(matrix, decimalPlaces));
 
-      const cofactorMatrix = this.getMatrixOfCofactors(matrix, steps);
+      const cofactorMatrix = this.getMatrixOfCofactors(matrix, steps, decimalPlaces);
 
       if (!cofactorMatrix) {
           // El error ya se añadió a los pasos en getMatrixOfCofactors
@@ -184,12 +206,12 @@ export class MatrixOperations {
        for (let i = 0; i < rowsCofactor; i++) {
            for (let j = 0; j < colsCofactor; j++) {
                adjointMatrix[j][i] = cofactorMatrix[i][j];
-               steps.push(`  Adj(A)[${j + 1}, ${i + 1}] = C[${i + 1}, ${j + 1}] = ${cofactorMatrix[i][j].toFixed(4)}`);
+               steps.push(`  Adj(A)[${j + 1}, ${i + 1}] = C[${i + 1}, ${j + 1}] = ${formatNumberForSteps(cofactorMatrix[i][j], decimalPlaces)}`);
            }
        }
 
       steps.push("\nMatriz Adjunta (Adj(A)):");
-      steps.push(this.matrixToString(adjointMatrix));
+      steps.push(this.matrixToString(adjointMatrix, decimalPlaces));
       steps.push("\nCálculo completado.");
 
       return { result: adjointMatrix, steps };
@@ -198,14 +220,15 @@ export class MatrixOperations {
   /**
    * Calcula el determinante de una matriz 3x3 usando la Regla de Sarrus.
    * @param matrix Matriz de entrada.
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns Objeto con el determinante y los pasos, o NaN si la matriz no es 3x3.
    */
-  static calculateDeterminantBySarrusWithSteps(matrix: number[][]): { determinant: number; steps: string[] } {
+  static calculateDeterminantBySarrusWithSteps(matrix: number[][], decimalPlaces: number = 2): { determinant: number; steps: string[] } {
     const n = matrix.length;
     let steps: string[] = [];
 
     steps.push("Intentando calcular determinante por Regla de Sarrus:");
-    steps.push(this.matrixToString(matrix));
+    steps.push(this.matrixToString(matrix, decimalPlaces));
 
     // Validar que sea 3x3
     if (n !== 3 || matrix.some(row => row.length !== 3)) {
@@ -222,9 +245,9 @@ export class MatrixOperations {
     steps.push("\nAplicando Regla de Sarrus (solo para 3x3):");
     steps.push("Se suman los productos de las diagonales principales y se restan los de las secundarias.");
     steps.push(`  Matriz extendida (imaginaria):
-    [${a.toFixed(2)}, ${b.toFixed(2)}, ${c.toFixed(2)}] ${a.toFixed(2)}, ${b.toFixed(2)}
-    [${d.toFixed(2)}, ${e.toFixed(2)}, ${f.toFixed(2)}] ${d.toFixed(2)}, ${e.toFixed(2)}
-    [${g.toFixed(2)}, ${h.toFixed(2)}, ${i.toFixed(2)}] ${g.toFixed(2)}, ${h.toFixed(2)}`);
+    [${formatNumberForSteps(a, decimalPlaces)}, ${formatNumberForSteps(b, decimalPlaces)}, ${formatNumberForSteps(c, decimalPlaces)}] ${formatNumberForSteps(a, decimalPlaces)}, ${formatNumberForSteps(b, decimalPlaces)}
+    [${formatNumberForSteps(d, decimalPlaces)}, ${formatNumberForSteps(e, decimalPlaces)}, ${formatNumberForSteps(f, decimalPlaces)}] ${formatNumberForSteps(d, decimalPlaces)}, ${formatNumberForSteps(e, decimalPlaces)}
+    [${formatNumberForSteps(g, decimalPlaces)}, ${formatNumberForSteps(h, decimalPlaces)}, ${formatNumberForSteps(i, decimalPlaces)}] ${formatNumberForSteps(g, decimalPlaces)}, ${formatNumberForSteps(h, decimalPlaces)}`);
 
     const term1 = a * e * i;
     const term2 = b * f * g;
@@ -234,23 +257,23 @@ export class MatrixOperations {
     const term6 = b * d * i;
 
     steps.push(`\n  Diagonales Principales (suman):`);
-    steps.push(`    1: ${a.toFixed(2)} * ${e.toFixed(2)} * ${i.toFixed(2)} = ${term1.toFixed(4)}`);
-    steps.push(`    2: ${b.toFixed(2)} * ${f.toFixed(2)} * ${g.toFixed(2)} = ${term2.toFixed(4)}`);
-    steps.push(`    3: ${c.toFixed(2)} * ${d.toFixed(2)} * ${h.toFixed(2)} = ${term3.toFixed(4)}`);
+    steps.push(`    1: ${formatNumberForSteps(a, decimalPlaces)} * ${formatNumberForSteps(e, decimalPlaces)} * ${formatNumberForSteps(i, decimalPlaces)} = ${formatNumberForSteps(term1, decimalPlaces)}`);
+    steps.push(`    2: ${formatNumberForSteps(b, decimalPlaces)} * ${formatNumberForSteps(f, decimalPlaces)} * ${formatNumberForSteps(g, decimalPlaces)} = ${formatNumberForSteps(term2, decimalPlaces)}`);
+    steps.push(`    3: ${formatNumberForSteps(c, decimalPlaces)} * ${formatNumberForSteps(d, decimalPlaces)} * ${formatNumberForSteps(h, decimalPlaces)} = ${formatNumberForSteps(term3, decimalPlaces)}`);
     const sumPositive = term1 + term2 + term3;
-    steps.push(`    Suma (+): ${sumPositive.toFixed(4)}`);
+    steps.push(`    Suma (+): ${formatNumberForSteps(sumPositive, decimalPlaces)}`);
 
     steps.push(`\n  Diagonales Secundarias (restan):`);
-    steps.push(`    4: ${c.toFixed(2)} * ${e.toFixed(2)} * ${g.toFixed(2)} = ${term4.toFixed(4)}`);
-    steps.push(`    5: ${a.toFixed(2)} * ${f.toFixed(2)} * ${h.toFixed(2)} = ${term5.toFixed(4)}`);
-    steps.push(`    6: ${b.toFixed(2)} * ${d.toFixed(2)} * ${i.toFixed(2)} = ${term6.toFixed(4)}`);
+    steps.push(`    4: ${formatNumberForSteps(c, decimalPlaces)} * ${formatNumberForSteps(e, decimalPlaces)} * ${formatNumberForSteps(g, decimalPlaces)} = ${formatNumberForSteps(term4, decimalPlaces)}`);
+    steps.push(`    5: ${formatNumberForSteps(a, decimalPlaces)} * ${formatNumberForSteps(f, decimalPlaces)} * ${formatNumberForSteps(h, decimalPlaces)} = ${formatNumberForSteps(term5, decimalPlaces)}`);
+    steps.push(`    6: ${formatNumberForSteps(b, decimalPlaces)} * ${formatNumberForSteps(d, decimalPlaces)} * ${formatNumberForSteps(i, decimalPlaces)} = ${formatNumberForSteps(term6, decimalPlaces)}`);
     const sumNegative = term4 + term5 + term6;
-    steps.push(`    Suma (-): ${sumNegative.toFixed(4)}`);
+    steps.push(`    Suma (-): ${formatNumberForSteps(sumNegative, decimalPlaces)}`);
 
     const determinant = sumPositive - sumNegative;
     steps.push(`\n  Determinante = (Suma Diagonales Principales) - (Suma Diagonales Secundarias)`);
-    steps.push(`  Determinante = ${sumPositive.toFixed(4)} - ${sumNegative.toFixed(4)} = ${determinant.toFixed(4)}`);
-    steps.push(`\nResultado final: El determinante (por Sarrus) es ${determinant.toFixed(4)}.`);
+    steps.push(`  Determinante = ${formatNumberForSteps(sumPositive, decimalPlaces)} - ${formatNumberForSteps(sumNegative, decimalPlaces)} = ${formatNumberForSteps(determinant, decimalPlaces)}`);
+    steps.push(`\nResultado final: El determinante (por Sarrus) es ${formatNumberForSteps(determinant, decimalPlaces)}.`);
 
     return { determinant: determinant, steps };
   }
@@ -259,9 +282,10 @@ export class MatrixOperations {
    * Multiplica dos matrices (A x B).
    * @param matrixA Matriz izquierda.
    * @param matrixB Matriz derecha.
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns Objeto con la matriz resultante y los pasos, o null y error si las dimensiones no son compatibles.
    */
-  static multiplyMatricesWithSteps(matrixA: number[][], matrixB: number[][]): { result: number[][] | null; steps: string[] } {
+  static multiplyMatricesWithSteps(matrixA: number[][], matrixB: number[][], decimalPlaces: number = 2): { result: number[][] | null; steps: string[] } {
     const rowsA = matrixA.length;
     const colsA = matrixA[0]?.length ?? 0;
     const rowsB = matrixB.length;
@@ -270,9 +294,9 @@ export class MatrixOperations {
 
     steps.push("Intentando multiplicar Matriz A por Matriz B:");
     steps.push("Matriz A:");
-    steps.push(this.matrixToString(matrixA));
+    steps.push(this.matrixToString(matrixA, decimalPlaces));
     steps.push("Matriz B:");
-    steps.push(this.matrixToString(matrixB));
+    steps.push(this.matrixToString(matrixB, decimalPlaces));
 
     // Validar dimensiones para multiplicación: Columnas de A deben ser igual a Filas de B
     if (colsA === 0 || colsB === 0) {
@@ -300,16 +324,16 @@ export class MatrixOperations {
           const valB = matrixB[k][j];
           const product = valA * valB;
           sum += product;
-          products.push(`(${valA.toFixed(2)} * ${valB.toFixed(2)})`);
+          products.push(`(${formatNumberForSteps(valA, decimalPlaces)} * ${formatNumberForSteps(valB, decimalPlaces)})`);
         }
         resultMatrix[i][j] = sum;
-        stepDetail += products.join(' + ') + ` = ${sum.toFixed(4)}`;
+        stepDetail += products.join(' + ') + ` = ${formatNumberForSteps(sum, decimalPlaces)}`;
         steps.push(stepDetail);
       }
     }
 
     steps.push("\nMatriz Resultante (C):")
-    steps.push(this.matrixToString(resultMatrix));
+    steps.push(this.matrixToString(resultMatrix, decimalPlaces));
     steps.push("\nCálculo completado.");
 
     return { result: resultMatrix, steps };
@@ -318,16 +342,17 @@ export class MatrixOperations {
   /**
    * Calcula la matriz transpuesta de una matriz dada.
    * @param matrix Matriz de entrada.
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns Objeto con la matriz transpuesta y los pasos.
    */
-  static transposeMatrixWithSteps(matrix: number[][]): { result: number[][] | null; steps: string[] } {
+  static transposeMatrixWithSteps(matrix: number[][], decimalPlaces: number = 2): { result: number[][] | null; steps: string[] } {
     const rows = matrix.length;
     const cols = matrix[0]?.length ?? 0;
     let steps: string[] = [];
 
     steps.push("Calculando la matriz transpuesta:");
     steps.push("Matriz Original (A):");
-    steps.push(this.matrixToString(matrix));
+    steps.push(this.matrixToString(matrix, decimalPlaces));
 
     if (rows === 0 || cols === 0) {
       steps.push("Error: La matriz está vacía.");
@@ -342,12 +367,12 @@ export class MatrixOperations {
     for (let i = 0; i < rows; i++) {
       for (let j = 0; j < cols; j++) {
         resultMatrix[j][i] = matrix[i][j];
-        steps.push(`  Aᵀ[${j + 1}, ${i + 1}] = A[${i + 1}, ${j + 1}] = ${matrix[i][j].toFixed(2)}`);
+        steps.push(`  Aᵀ[${j + 1}, ${i + 1}] = A[${i + 1}, ${j + 1}] = ${formatNumberForSteps(matrix[i][j], decimalPlaces)}`);
       }
     }
 
     steps.push("\nMatriz Transpuesta (Aᵀ):");
-    steps.push(this.matrixToString(resultMatrix));
+    steps.push(this.matrixToString(resultMatrix, decimalPlaces));
     steps.push("\nCálculo completado.");
 
     return { result: resultMatrix, steps };
@@ -357,16 +382,17 @@ export class MatrixOperations {
    * Calcula la matriz inversa usando el método de la adjunta.
    * A⁻¹ = (1 / det(A)) * Adj(A)
    * @param matrix Matriz cuadrada original.
+   * @param decimalPlaces Número de decimales para formatear los números en los pasos.
    * @returns Objeto con la matriz inversa y los pasos, o null y error.
    */
-  static calculateInverseWithSteps(matrix: number[][]): { result: number[][] | null; steps: string[] } {
+  static calculateInverseWithSteps(matrix: number[][], decimalPlaces: number = 2): { result: number[][] | null; steps: string[] } {
     let combinedSteps: string[] = [];
     const n = matrix.length;
 
     combinedSteps.push("Calculando la Matriz Inversa usando el método de la Adjunta:");
     combinedSteps.push("Fórmula: A⁻¹ = (1 / det(A)) * Adj(A)");
     combinedSteps.push("Matriz Original (A):");
-    combinedSteps.push(this.matrixToString(matrix));
+    combinedSteps.push(this.matrixToString(matrix, decimalPlaces));
 
     if (n === 0) {
       combinedSteps.push("Error: La matriz está vacía.");
@@ -379,7 +405,7 @@ export class MatrixOperations {
 
     // --- Paso 1: Calcular Determinante --- 
     combinedSteps.push("\n--- Paso 1: Calcular el Determinante de A ---");
-    const detResult = this.calculateDeterminantWithSteps(matrix);
+    const detResult = this.calculateDeterminantWithSteps(matrix, decimalPlaces);
     combinedSteps.push(...detResult.steps); // Añadir pasos del cálculo del determinante
     const determinant = detResult.determinant;
 
@@ -388,21 +414,21 @@ export class MatrixOperations {
         return { result: null, steps: combinedSteps };
     }
     
-    combinedSteps.push(`\nDeterminante calculado: det(A) = ${determinant.toFixed(4)}`);
+    combinedSteps.push(`\nDeterminante calculado: det(A) = ${formatNumberForSteps(determinant, decimalPlaces)}`);
 
     // --- Paso 2: Comprobar si el determinante es cero --- 
     combinedSteps.push("\n--- Paso 2: Comprobar si det(A) ≠ 0 ---");
     if (Math.abs(determinant) < 1e-10) { // Considerar cero si es muy pequeño (manejo de precisión)
-      combinedSteps.push(`El determinante es ${determinant.toFixed(4)} (considerado cero).`);
+      combinedSteps.push(`El determinante es ${formatNumberForSteps(determinant, decimalPlaces)} (considerado cero).`);
       combinedSteps.push("La matriz es singular, por lo tanto, no tiene inversa.");
       return { result: null, steps: combinedSteps };
     } else {
-      combinedSteps.push(`El determinante es ${determinant.toFixed(4)} (diferente de cero). La inversa existe.`);
+      combinedSteps.push(`El determinante es ${formatNumberForSteps(determinant, decimalPlaces)} (diferente de cero). La inversa existe.`);
     }
 
     // --- Paso 3: Calcular Matriz Adjunta --- 
     combinedSteps.push("\n--- Paso 3: Calcular la Matriz Adjunta de A (Adj(A)) ---");
-    const adjResult = this.calculateAdjointWithSteps(matrix);
+    const adjResult = this.calculateAdjointWithSteps(matrix, decimalPlaces);
     if (!adjResult.result) {
         // Error ya registrado en los pasos de adjResult
         combinedSteps.push(...adjResult.steps); 
@@ -412,25 +438,25 @@ export class MatrixOperations {
     combinedSteps.push(...adjResult.steps); // Añadir pasos del cálculo de la adjunta
     const adjointMatrix = adjResult.result;
     combinedSteps.push("\nMatriz Adjunta calculada (Adj(A)):");
-    combinedSteps.push(this.matrixToString(adjointMatrix));
+    combinedSteps.push(this.matrixToString(adjointMatrix, decimalPlaces));
 
     // --- Paso 4: Calcular Inversa = (1 / det(A)) * Adj(A) --- 
-    combinedSteps.push(`\n--- Paso 4: Calcular Inversa A⁻¹ = (1 / ${determinant.toFixed(4)}) * Adj(A) ---`);
+    combinedSteps.push(`\n--- Paso 4: Calcular Inversa A⁻¹ = (1 / ${formatNumberForSteps(determinant, decimalPlaces)}) * Adj(A) ---`);
     const inverseMatrix: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
     const invDet = 1 / determinant;
-    combinedSteps.push(`  Multiplicando cada elemento de Adj(A) por (1 / ${determinant.toFixed(4)}) ≈ ${invDet.toExponential(4)}:`);
+    combinedSteps.push(`  Multiplicando cada elemento de Adj(A) por (1 / ${formatNumberForSteps(determinant, decimalPlaces)}) ≈ ${formatNumberForSteps(invDet, decimalPlaces+2)}:`);
 
     for (let i = 0; i < n; i++) {
         for (let j = 0; j < n; j++) {
             const originalValue = adjointMatrix[i][j];
             const newValue = invDet * originalValue;
             inverseMatrix[i][j] = newValue;
-             combinedSteps.push(`  A⁻¹[${i + 1}, ${j + 1}] = ${invDet.toExponential(4)} * ${originalValue.toFixed(4)} = ${newValue.toFixed(4)}`);
+             combinedSteps.push(`  A⁻¹[${i + 1}, ${j + 1}] = ${formatNumberForSteps(invDet, decimalPlaces+2)} * ${formatNumberForSteps(originalValue, decimalPlaces)} = ${formatNumberForSteps(newValue, decimalPlaces)}`);
         }
     }
 
     combinedSteps.push("\nMatriz Inversa (A⁻¹):");
-    combinedSteps.push(this.matrixToString(inverseMatrix));
+    combinedSteps.push(this.matrixToString(inverseMatrix, decimalPlaces));
     combinedSteps.push("\nCálculo completado.");
 
     return { result: inverseMatrix, steps: combinedSteps };
@@ -444,11 +470,11 @@ export class MatrixOperations {
       .map(row => row.filter((_, colIndex) => colIndex !== colToRemove));
   }
 
-  private static matrixToString(matrix: number[][], indentation = 4): string {
+  private static matrixToString(matrix: number[][], decimalPlaces: number = 2, indentation = 4): string {
     const indent = ' '.repeat(indentation);
     return indent + '[' +
       matrix.map(row => 
-        '[' + row.map(cell => cell.toFixed(2)).join(', ') + ']' // Formato con 2 decimales
+        '[' + row.map(cell => formatNumberForSteps(cell, decimalPlaces)).join(', ') + ']' // Usar helper
       ).join(',\n' + indent + ' ')
     + ']';
   }
