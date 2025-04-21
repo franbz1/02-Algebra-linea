@@ -6,19 +6,37 @@ interface MatrixResultProps {
   result: number | number[][] | null
   steps: string[]
   matrix?: number[][] // Matriz original A
-  // matrixB?: number[][] // Podríamos necesitar la matriz B original también
+  matrixB?: number[][] // Añadir Matriz B opcional
   type: OperationType
 }
 
+// Helper para formatear números para mostrar en celdas
+const formatNumberForDisplay = (num: number): string => {
+  if (isNaN(num) || !isFinite(num)) {
+    return num.toString(); // Mostrar NaN, Infinity, -Infinity tal cual
+  }
+  const absNum = Math.abs(num);
+  // Usar notación exponencial para números muy grandes o muy pequeños (fuera de ~0.01 a ~1,000,000)
+  if (absNum > 1e6 || (absNum < 1e-2 && absNum !== 0)) {
+    return num.toExponential(2);
+  } 
+  // Usar formato fijo para números en rango "normal"
+  return num.toFixed(2);
+};
+
 // Componente para renderizar una matriz (no editable)
 const MatrixDisplay = ({ matrixData }: { matrixData: number[][] }) => (
-  <div className="font-mono text-sm bg-slate-100 p-3 rounded-md inline-block border border-slate-200">
+  <div className="font-mono text-sm bg-slate-100 p-2 rounded-md inline-block border border-slate-200">
     {matrixData.map((row, i) => (
-      <div key={i} className="flex justify-center gap-2 mb-1 last:mb-0">
+      <div key={i} className="flex justify-center gap-1 mb-1 last:mb-0"> {/* Reducir gap */} 
         {row.map((val, j) => (
-          <span key={j} className="w-12 text-center p-1 bg-white rounded shadow-sm">
-            {/* Mostrar NaN o Infinito si ocurre, o formatear número */} 
-            {isNaN(val) || !isFinite(val) ? val.toString() : val.toFixed(2)}
+          <span 
+             key={j} 
+             // Ajustar ancho y padding ligeramente, permitir que el texto se reduzca si es necesario
+             className="w-16 text-center p-1 bg-white rounded shadow-sm text-xs sm:text-sm overflow-hidden text-ellipsis whitespace-nowrap" 
+             title={val.toString()} // Mostrar valor completo en tooltip
+          >
+            {formatNumberForDisplay(val)} {/* Usar el helper de formato */} 
           </span>
         ))}
       </div>
@@ -26,7 +44,7 @@ const MatrixDisplay = ({ matrixData }: { matrixData: number[][] }) => (
   </div>
 );
 
-export function MatrixResult({ title, result, steps, matrix, type }: MatrixResultProps) {
+export function MatrixResult({ title, result, steps, matrix, matrixB, type }: MatrixResultProps) {
 
   // Función para generar el texto introductorio según la operación
   const getIntroText = () => {
@@ -117,15 +135,26 @@ export function MatrixResult({ title, result, steps, matrix, type }: MatrixResul
          </div>
       </div>
 
-      {/* Mostrar Matriz(ces) Original(es) - Opcional */} 
-      {matrix && (
-        <div className="bg-slate-50 p-3 rounded-md border border-slate-200">
-          <h4 className="text-sm font-medium text-slate-700 mb-2">Matriz Original{/* (A) */}</h4>
-          <div className="flex justify-center">
-             <MatrixDisplay matrixData={matrix} />
-          </div>
-          {/* Aquí podríamos mostrar Matrix B si existe y es relevante */}
-        </div>
+      {/* Mostrar Matriz(ces) Original(es) */} 
+      {(matrix || matrixB) && (
+         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 bg-slate-50 p-3 rounded-md border border-slate-200">
+           {matrix && (
+            <div className="text-center">
+              <h4 className="text-sm font-medium text-slate-700 mb-2">Matriz Original A</h4>
+              <div className="flex justify-center">
+                <MatrixDisplay matrixData={matrix} />
+              </div>
+            </div>
+           )}
+           {matrixB && (
+             <div className="text-center">
+               <h4 className="text-sm font-medium text-slate-700 mb-2">Matriz Original B</h4>
+               <div className="flex justify-center">
+                 <MatrixDisplay matrixData={matrixB} />
+               </div>
+             </div>
+           )}
+         </div>
       )}
 
       {/* Sección de Pasos */} 

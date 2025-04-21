@@ -148,6 +148,66 @@ export class MatrixOperations {
     return { determinant: determinant, steps };
   }
 
+  /**
+   * Multiplica dos matrices (A x B).
+   * @param matrixA Matriz izquierda.
+   * @param matrixB Matriz derecha.
+   * @returns Objeto con la matriz resultante y los pasos, o null y error si las dimensiones no son compatibles.
+   */
+  static multiplyMatricesWithSteps(matrixA: number[][], matrixB: number[][]): { result: number[][] | null; steps: string[] } {
+    const rowsA = matrixA.length;
+    const colsA = matrixA[0]?.length ?? 0;
+    const rowsB = matrixB.length;
+    const colsB = matrixB[0]?.length ?? 0;
+    let steps: string[] = [];
+
+    steps.push("Intentando multiplicar Matriz A por Matriz B:");
+    steps.push("Matriz A:");
+    steps.push(this.matrixToString(matrixA));
+    steps.push("Matriz B:");
+    steps.push(this.matrixToString(matrixB));
+
+    // Validar dimensiones para multiplicación: Columnas de A deben ser igual a Filas de B
+    if (colsA === 0 || colsB === 0) {
+        steps.push("Error: Una o ambas matrices están vacías.");
+        return { result: null, steps };
+    }
+    if (colsA !== rowsB) {
+      steps.push(`Error: Dimensiones incompatibles para la multiplicación.`);
+      steps.push(`  El número de columnas de la Matriz A (${colsA}) debe ser igual al número de filas de la Matriz B (${rowsB}).`);
+      return { result: null, steps };
+    }
+
+    // Inicializar matriz resultado con ceros (dimensiones: rowsA x colsB)
+    const resultMatrix: number[][] = Array.from({ length: rowsA }, () => Array(colsB).fill(0));
+    steps.push(`\nRealizando la multiplicación A (${rowsA}x${colsA}) * B (${rowsB}x${colsB}) = C (${rowsA}x${colsB}):`);
+
+    // Realizar la multiplicación
+    for (let i = 0; i < rowsA; i++) {        // Iterar sobre filas de A (y resultado C)
+      for (let j = 0; j < colsB; j++) {      // Iterar sobre columnas de B (y resultado C)
+        let sum = 0;
+        let stepDetail = `  C[${i + 1},${j + 1}] = (Fila ${i + 1} de A) * (Columna ${j + 1} de B) = `;
+        let products: string[] = [];
+        for (let k = 0; k < colsA; k++) {    // Iterar sobre columnas de A / filas de B
+          const valA = matrixA[i][k];
+          const valB = matrixB[k][j];
+          const product = valA * valB;
+          sum += product;
+          products.push(`(${valA.toFixed(2)} * ${valB.toFixed(2)})`);
+        }
+        resultMatrix[i][j] = sum;
+        stepDetail += products.join(' + ') + ` = ${sum.toFixed(4)}`;
+        steps.push(stepDetail);
+      }
+    }
+
+    steps.push("\nMatriz Resultante (C):")
+    steps.push(this.matrixToString(resultMatrix));
+    steps.push("\nCálculo completado.");
+
+    return { result: resultMatrix, steps };
+  }
+
   // --- Aquí se añadirían otras funciones de cálculo --- 
   // static sumMatrices(matrixA: number[][], matrixB: number[][]): { result: number[][]; steps: string[] } { ... }
   // static subtractMatrices(matrixA: number[][], matrixB: number[][]): { result: number[][]; steps: string[] } { ... }

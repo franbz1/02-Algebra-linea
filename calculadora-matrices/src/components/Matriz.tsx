@@ -10,20 +10,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Menu, Calculator } from "lucide-react"
+import { Menu, Calculator, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { MatrixOperations } from "../lib/MatrixOperations"
-import { MENU_OPTIONS, OperationType } from "../config/operations"
+import { MENU_OPTIONS, OperationType, OperationOption } from "../config/operations"
+
+interface ExtendedOperationOption extends OperationOption {
+  requiresTwoMatrices?: boolean;
+}
+
+const EXTENDED_MENU_OPTIONS: ExtendedOperationOption[] = MENU_OPTIONS.map(opt => ({
+  ...opt,
+  requiresTwoMatrices: ["sum", "subtract", "multiply"].includes(opt.value)
+}));
 
 export default function Matriz() {
   const [size, setSize] = useState(2)
   const [matrix, setMatrix] = useState<string[][]>(Array(size).fill(Array(size).fill("")))
+  const [matrixB, setMatrixB] = useState<string[][]>(Array(size).fill(Array(size).fill("")))
   const [matrixCalculated, setMatrixCalculated] = useState<number[][] | null>(null)
+  const [matrixBCalculated, setMatrixBCalculated] = useState<number[][] | null>(null)
   const [result, setResult] = useState<number | number[][] | null>(null)
   const [calculationSteps, setCalculationSteps] = useState<string[]>([])
   const [showResult, setShowResult] = useState(false)
   const [selectedOperation, setSelectedOperation] = useState<OperationType>("determinant")
   const [isResizing, setIsResizing] = useState(false)
+  const [showMatrixBInput, setShowMatrixBInput] = useState(false)
 
   const increaseSize = () => {
     if (size < 5) {
@@ -55,11 +67,24 @@ export default function Matriz() {
     )
   }
 
+  const handleInputChangeB = (rowIndex: number, colIndex: number, value: string) => {
+    setMatrixB(prevMatrixB =>
+      prevMatrixB.map((row, rIndex) =>
+        rIndex === rowIndex
+          ? row.map((cell: string, cIndex: number) => (cIndex === colIndex ? value : cell))
+          : row
+      )
+    )
+  }
+
   const clearMatrix = () => {
     setMatrix(Array(size).fill(Array(size).fill("")))
+    setMatrixB(Array(size).fill(Array(size).fill("")))
     setResult(null)
     setCalculationSteps([])
     setShowResult(false)
+    setMatrixCalculated(null)
+    setMatrixBCalculated(null)
   }
 
   const handleCalculate = () => {
@@ -70,7 +95,20 @@ export default function Matriz() {
       })
     );
     
+    let numericMatrixB: number[][] | null = null;
+    const operationConfig = EXTENDED_MENU_OPTIONS.find(opt => opt.value === selectedOperation);
+    if (operationConfig?.requiresTwoMatrices) {
+        numericMatrixB = matrixB.map(row => 
+          row.map(cell => {
+            const num = parseFloat(cell);
+            return isNaN(num) ? 0 : num;
+          })
+        );
+    }
+
     let operationResult: { result: number | number[][]; steps: string[] } | null = null;
+    setMatrixCalculated(numericMatrix)
+    setMatrixBCalculated(numericMatrixB)
 
     try {
       switch (selectedOperation) {
@@ -95,29 +133,26 @@ export default function Matriz() {
             operationResult = { result: sarrusResult.determinant, steps: sarrusResult.steps };
           }
           break;
-        case "sum":
-          console.warn("Operación 'Suma' no implementada aún.");
-          setCalculationSteps(["Operación no implementada."])
-          break;
-        case "subtract":
-          console.warn("Operación 'Resta' no implementada aún.");
-          setCalculationSteps(["Operación no implementada."])
-          break;
         case "multiply":
-          console.warn("Operación 'Multiplicación' no implementada aún.");
-          setCalculationSteps(["Operación no implementada."])
+          if (!numericMatrixB) {
+            console.error("Error interno: Matriz B no está disponible para multiplicación.");
+            setCalculationSteps(["Error interno: Matriz B requerida."]);
+            operationResult = null;
+          } else {
+            const multResult = MatrixOperations.multiplyMatricesWithSteps(numericMatrix, numericMatrixB);
+            if (multResult.result === null) {
+              setCalculationSteps(multResult.steps);
+              operationResult = null;
+            } else {
+              operationResult = { result: multResult.result, steps: multResult.steps };
+            }
+          }
           break;
-        case "transpose":
-          console.warn("Operación 'Transpuesta' no implementada aún.");
+        case "sum":
+        case "subtract":
+          console.warn(`Operación '${selectedOperation}' no implementada aún.`);
           setCalculationSteps(["Operación no implementada."])
-          break;
-        case "inverse":
-          console.warn("Operación 'Inversa' no implementada aún.");
-          setCalculationSteps(["Operación no implementada."])
-          break;
-        case "cramer":
-          console.warn("Operación 'Cramer' no implementada aún.");
-          setCalculationSteps(["Operación no implementada."])
+          operationResult = null;
           break;
         default:
           console.error(`Operación desconocida: ${selectedOperation}`);
@@ -129,11 +164,9 @@ export default function Matriz() {
         setResult(operationResult.result);
         setCalculationSteps(operationResult.steps);
         setShowResult(true);
-        setMatrixCalculated(numericMatrix);
       } else {
         setShowResult(true)
         setResult(null)
-        setMatrixCalculated(numericMatrix)
       }
 
     } catch (error) {
@@ -141,7 +174,6 @@ export default function Matriz() {
       setCalculationSteps([`Error inesperado durante el cálculo: ${error instanceof Error ? error.message : String(error)}`])
       setResult(null)
       setShowResult(true)
-      setMatrixCalculated(numericMatrix)
     }
   };
 
@@ -150,14 +182,17 @@ export default function Matriz() {
     setShowResult(false)
     setResult(null)
     setCalculationSteps([])
+    const operationConfig = EXTENDED_MENU_OPTIONS.find(opt => opt.value === operation);
+    setShowMatrixBInput(operationConfig?.requiresTwoMatrices ?? false);
   }
 
   const getSelectedOperationLabel = () => {
-    return MENU_OPTIONS.find(option => option.value === selectedOperation)?.label || "Seleccionar operación"
+    return EXTENDED_MENU_OPTIONS.find(option => option.value === selectedOperation)?.label || "Seleccionar operación"
   }
 
   useEffect(() => {
     setMatrix(Array.from({ length: size }, () => Array(size).fill("")))
+    setMatrixB(Array.from({ length: size }, () => Array(size).fill("")))
     setShowResult(false)
   }, [size])
 
@@ -185,7 +220,7 @@ export default function Matriz() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              {MENU_OPTIONS.map((option) => (
+              {EXTENDED_MENU_OPTIONS.map((option) => (
                 <DropdownMenuItem 
                   key={option.value}
                   onSelect={() => handleOperationSelect(option.value)}
@@ -224,26 +259,50 @@ export default function Matriz() {
             />
           </div>
 
-          <motion.div
-            key={`matrix-a-${size}`}
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ 
-              scale: isResizing ? 0.95 : 1, 
-              opacity: isResizing ? 0.5 : 1 
-            }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 500, 
-              damping: 30,
-              duration: 0.3
-            }}
-            className="bg-white rounded-md border border-slate-200 p-4"
-          >
-            <MatrixInput
-              matrix={matrix}
-              onInputChange={handleInputChange}
-            />
-          </motion.div>
+          <div className={`grid gap-6 ${showMatrixBInput ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+            <motion.div
+              key={`matrix-a-${size}`}
+              layout
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ 
+                scale: isResizing ? 0.95 : 1, 
+                opacity: isResizing ? 0.5 : 1 
+              }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 500, 
+                damping: 30,
+                duration: 0.3
+              }}
+              className="bg-white rounded-md border border-slate-200 p-4"
+            >
+              <MatrixInput
+                matrix={matrix}
+                onInputChange={handleInputChange}
+                label="Matriz A"
+              />
+            </motion.div>
+
+            <AnimatePresence>
+              {showMatrixBInput && (
+                <motion.div
+                  key={`matrix-b-${size}`}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  className="bg-white rounded-md border border-slate-200 p-4 relative"
+                >
+                  <MatrixInput
+                    matrix={matrixB}
+                    onInputChange={handleInputChangeB}
+                    label="Matriz B"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <div>
             <MatrixActions
@@ -266,6 +325,7 @@ export default function Matriz() {
                   result={result}
                   steps={calculationSteps}
                   matrix={matrixCalculated ?? undefined}
+                  matrixB={matrixBCalculated ?? undefined}
                   type={selectedOperation}
                 />
               </motion.div>
