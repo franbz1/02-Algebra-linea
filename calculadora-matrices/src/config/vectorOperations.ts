@@ -8,6 +8,7 @@ export type VectorOperationType =
   | "scalar_multiply"
   | "vector_add"
   | "vector_subtract"
+  | "vector_angle"
 
 export interface VectorOperationOption {
   value: VectorOperationType
@@ -28,6 +29,11 @@ export const VECTOR_OPERATIONS: VectorOperationOption[] = [
     value: "normalize",
     label: "Normalizar",
     description: "Convierte el vector en un vector unitario",
+  },
+  {
+    value: "vector_angle",
+    label: "Ángulo del vector",
+    description: "Calcula el ángulo que forma el vector con el eje X positivo",
   },
   {
     value: "dot_product",

@@ -150,8 +150,15 @@ export function CartesianCanvas({ state, actions, vectors = [], showAsPoints = t
     // Dibujar vectores
     if (vectors && vectors.length > 0) {
       vectors.forEach((vector) => {
-        const canvasX = centerX + vector.x * scale
-        const canvasY = centerY - vector.y * scale // Invertir Y para el sistema de coordenadas del canvas
+        const startX = vector.startX ?? 0; // Punto de inicio X (por defecto 0)
+        const startY = vector.startY ?? 0; // Punto de inicio Y (por defecto 0)
+        
+        // Convertir coordenadas al sistema del canvas
+        const canvasStartX = centerX + startX * scale;
+        const canvasStartY = centerY - startY * scale; // Invertir Y
+        const canvasEndX = centerX + (startX + vector.x) * scale;
+        const canvasEndY = centerY - (startY + vector.y) * scale; // Invertir Y
+        
         const color = vector.color || "#3b82f6" // Color azul por defecto
 
         // Dibujar componentes del vector con líneas punteadas
@@ -161,14 +168,14 @@ export function CartesianCanvas({ state, actions, vectors = [], showAsPoints = t
 
         // Componente X (línea horizontal)
         ctx.beginPath()
-        ctx.moveTo(canvasX, centerY)
-        ctx.lineTo(canvasX, canvasY)
+        ctx.moveTo(canvasEndX, canvasStartY)
+        ctx.lineTo(canvasEndX, canvasEndY)
         ctx.stroke()
 
         // Componente Y (línea vertical)
         ctx.beginPath()
-        ctx.moveTo(centerX, canvasY)
-        ctx.lineTo(canvasX, canvasY)
+        ctx.moveTo(canvasStartX, canvasEndY)
+        ctx.lineTo(canvasEndX, canvasEndY)
         ctx.stroke()
 
         // Restablecer línea sólida para el resto de los elementos
@@ -179,7 +186,7 @@ export function CartesianCanvas({ state, actions, vectors = [], showAsPoints = t
           // Dibujar como punto
           ctx.fillStyle = color
           ctx.beginPath()
-          ctx.arc(canvasX, canvasY, 6, 0, Math.PI * 2)
+          ctx.arc(canvasEndX, canvasEndY, 6, 0, Math.PI * 2)
           ctx.fill()
 
           // Dibujar etiqueta si existe
@@ -188,7 +195,7 @@ export function CartesianCanvas({ state, actions, vectors = [], showAsPoints = t
             ctx.font = "12px Arial"
             ctx.textAlign = "center"
             ctx.textBaseline = "bottom"
-            ctx.fillText(vector.label, canvasX, canvasY - 10)
+            ctx.fillText(vector.label, canvasEndX, canvasEndY - 10)
           }
 
           // Dibujar valores de componentes X e Y
@@ -198,37 +205,37 @@ export function CartesianCanvas({ state, actions, vectors = [], showAsPoints = t
           // Etiqueta componente X
           ctx.textAlign = "left"
           ctx.textBaseline = "top"
-          ctx.fillText(`x: ${vector.x}`, canvasX + 5, centerY + 2)
+          ctx.fillText(`x: ${startX + vector.x}`, canvasEndX + 5, centerY + 2)
 
           // Etiqueta componente Y
           ctx.textAlign = "right"
           ctx.textBaseline = "middle"
-          ctx.fillText(`y: ${vector.y}`, centerX - 5, canvasY)
+          ctx.fillText(`y: ${startY + vector.y}`, centerX - 5, canvasEndY)
         } else {
-          // Dibujar como flecha desde el origen
+          // Dibujar como flecha desde el punto de inicio
           ctx.strokeStyle = color
           ctx.fillStyle = color
           ctx.lineWidth = 2
 
-          // Línea desde el origen al punto
+          // Línea desde el inicio al punto final
           ctx.beginPath()
-          ctx.moveTo(centerX, centerY)
-          ctx.lineTo(canvasX, canvasY)
+          ctx.moveTo(canvasStartX, canvasStartY)
+          ctx.lineTo(canvasEndX, canvasEndY)
           ctx.stroke()
 
           // Dibujar punta de flecha
-          const angle = Math.atan2(centerY - canvasY, canvasX - centerX)
+          const angle = Math.atan2(canvasStartY - canvasEndY, canvasEndX - canvasStartX)
           const headLength = 10 // Longitud de la punta de la flecha
 
           ctx.beginPath()
-          ctx.moveTo(canvasX, canvasY)
+          ctx.moveTo(canvasEndX, canvasEndY)
           ctx.lineTo(
-            canvasX - headLength * Math.cos(angle - Math.PI / 6),
-            canvasY + headLength * Math.sin(angle - Math.PI / 6),
+            canvasEndX - headLength * Math.cos(angle - Math.PI / 6),
+            canvasEndY + headLength * Math.sin(angle - Math.PI / 6),
           )
           ctx.lineTo(
-            canvasX - headLength * Math.cos(angle + Math.PI / 6),
-            canvasY + headLength * Math.sin(angle + Math.PI / 6),
+            canvasEndX - headLength * Math.cos(angle + Math.PI / 6),
+            canvasEndY + headLength * Math.sin(angle + Math.PI / 6),
           )
           ctx.closePath()
           ctx.fill()
@@ -240,22 +247,30 @@ export function CartesianCanvas({ state, actions, vectors = [], showAsPoints = t
             ctx.textAlign = "center"
             ctx.textBaseline = "bottom"
             // Posicionar la etiqueta a mitad de camino entre el origen y el punto
-            ctx.fillText(vector.label, centerX + (vector.x * scale) / 2, centerY - (vector.y * scale) / 2 - 5)
+            const labelX = canvasStartX + (canvasEndX - canvasStartX) / 2;
+            const labelY = canvasStartY + (canvasEndY - canvasStartY) / 2 - 5;
+            ctx.fillText(vector.label, labelX, labelY)
           }
 
           // Dibujar valores de componentes X e Y
           ctx.font = "10px Arial"
           ctx.fillStyle = hexToRgba(color, 0.9)
-
+          
           // Etiqueta componente X
           ctx.textAlign = "center"
           ctx.textBaseline = "top"
-          ctx.fillText(`x: ${vector.x}`, centerX + (vector.x * scale) / 2, centerY + 2)
+          // Posicionar en la mitad de la línea del vector
+          const xLabelX = (canvasStartX + canvasEndX) / 2;
+          const xLabelY = Math.max(canvasStartY, canvasEndY) + 5;
+          ctx.fillText(`x: ${vector.x}`, xLabelX, xLabelY)
 
           // Etiqueta componente Y
           ctx.textAlign = "right"
           ctx.textBaseline = "middle"
-          ctx.fillText(`y: ${vector.y}`, centerX - 5, centerY - (vector.y * scale) / 2)
+          // Posicionar a la izquierda de la mitad de la altura del vector
+          const yLabelX = Math.min(canvasStartX, canvasEndX) - 5;
+          const yLabelY = (canvasStartY + canvasEndY) / 2;
+          ctx.fillText(`y: ${vector.y}`, yLabelX, yLabelY)
         }
       })
     }

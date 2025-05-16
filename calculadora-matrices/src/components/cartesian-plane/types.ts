@@ -4,6 +4,8 @@ export interface Vector2D {
   y: number
   color?: string // Color opcional para cada vector
   label?: string // Etiqueta opcional para cada vector
+  startX?: number // Punto de inicio X opcional (por defecto 0)
+  startY?: number // Punto de inicio Y opcional (por defecto 0)
 }
 
 export interface CartesianPlaneState {

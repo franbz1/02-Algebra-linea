@@ -13,6 +13,7 @@ interface VectorResultProps {
   decimalPlaces: number
   vectorA?: number[]
   vectorB?: number[]
+  visualizationVectors?: Vector2D[]
 }
 
 const formatVector = (vector: number[] | null, decimalPlaces: number): string => {
@@ -21,33 +22,50 @@ const formatVector = (vector: number[] | null, decimalPlaces: number): string =>
 }
 
 export function VectorResult(props: VectorResultProps) {
-  const { title, result, steps, decimalPlaces, vectorA, vectorB } = props
+  const { title, result, steps, decimalPlaces, vectorA, vectorB, visualizationVectors } = props
   // type se omite intencionalmente ya que no se usa actualmente
   
   const [showSteps, setShowSteps] = useState(false)
   const [showVisualization, setShowVisualization] = useState(true)
   
   // Preparar vectores para visualización
-  // Esto asume que solo visualizamos vectores 2D
-  // Para vectores de mayor dimensión, podríamos mostrar solo las dos primeras componentes
-  const getVector2D = (vector: number[] | undefined): Vector2D | null => {
-    if (!vector || vector.length < 2) return null
-    return { x: vector[0], y: vector[1] }
-  }
+  let vectorsToRender: Vector2D[] = []
   
-  const vectorsToRender: Vector2D[] = []
-  
-  // Añadir vectorA si existe y es 2D
-  const vector2DA = getVector2D(vectorA)
-  if (vector2DA) vectorsToRender.push(vector2DA)
-  
-  // Añadir vectorB si existe y es 2D
-  const vector2DB = getVector2D(vectorB)
-  if (vector2DB) vectorsToRender.push(vector2DB)
-  
-  // Añadir el resultado si es un vector y 2D
-  if (result && Array.isArray(result) && result.length >= 2) {
-    vectorsToRender.push({ x: result[0], y: result[1] })
+  // Si nos proporcionan vectores de visualización predefinidos, los usamos
+  if (visualizationVectors && visualizationVectors.length > 0) {
+    vectorsToRender = visualizationVectors;
+  } 
+  // De lo contrario, construimos vectores simples a partir de vectorA, vectorB y result
+  else {
+    // Añadir vectorA si existe y es 2D
+    if (vectorA && vectorA.length >= 2) {
+      vectorsToRender.push({
+        x: vectorA[0], 
+        y: vectorA[1],
+        color: "#3b82f6", // Blue
+        label: "Vector A"
+      });
+    }
+    
+    // Añadir vectorB si existe y es 2D
+    if (vectorB && vectorB.length >= 2) {
+      vectorsToRender.push({
+        x: vectorB[0], 
+        y: vectorB[1],
+        color: "#10b981", // Green
+        label: "Vector B"
+      });
+    }
+    
+    // Añadir el resultado si es un vector y 2D
+    if (result && Array.isArray(result) && result.length >= 2) {
+      vectorsToRender.push({
+        x: result[0], 
+        y: result[1],
+        color: "#ef4444", // Red
+        label: "Resultado"
+      });
+    }
   }
   
   const canVisualize = vectorsToRender.length > 0

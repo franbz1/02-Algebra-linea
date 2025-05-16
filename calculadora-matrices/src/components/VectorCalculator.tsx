@@ -12,9 +12,10 @@ import { Menu, Move } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { DecimalPlacesControl } from "./DecimalPlacesControl"
 import { MatrixDimensionControl } from "./MatrixDimensionControl"
-import { AngleInput } from "./AngleInput"
 import { VECTOR_OPERATIONS, VectorOperationType } from "../config/vectorOperations"
 import { VectorResult } from "./VectorResult"
+import { VectorOperations, VectorOperationResult } from "../lib/VectorOperations"
+import { Vector2D } from "./cartesian-plane/types"
 
 // Helper para crear vector vacío
 const createEmptyVector = (size: number): string[] => {
@@ -22,11 +23,9 @@ const createEmptyVector = (size: number): string[] => {
 };
 
 export default function VectorCalculator() {
-  const [vectorSize, setVectorSize] = useState(3)
+  const [vectorSize, setVectorSize] = useState(2)
   const [vectorA, setVectorA] = useState<string[]>(createEmptyVector(vectorSize))
   const [vectorB, setVectorB] = useState<string[]>(createEmptyVector(vectorSize))
-  const [angleA, setAngleA] = useState("")
-  const [angleB, setAngleB] = useState("")
   const [scalarValue, setScalarValue] = useState("")
   const [calculationSteps, setCalculationSteps] = useState<string[]>([])
   const [showResult, setShowResult] = useState(false)
@@ -37,6 +36,12 @@ export default function VectorCalculator() {
   const [result, setResult] = useState<number | number[] | null>(null)
   const [vectorAValues, setVectorAValues] = useState<number[] | null>(null)
   const [vectorBValues, setVectorBValues] = useState<number[] | null>(null)
+  const [visualizationVectors, setVisualizationVectors] = useState<Vector2D[] | undefined>(undefined)
+
+  useEffect(() => {
+    console.log("vectorAValues", vectorAValues)
+    console.log("vectorBValues", vectorBValues)
+  }, [vectorAValues, vectorBValues])
 
   const handleSizeChange = useCallback((newSize: number) => {
     if (newSize >= 2 && newSize <= 5) {
@@ -56,14 +61,6 @@ export default function VectorCalculator() {
     )
   }
 
-  const handleAngleAChange = (value: string) => {
-    setAngleA(value)
-  }
-
-  const handleAngleBChange = (value: string) => {
-    setAngleB(value)
-  }
-
   const handleScalarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setScalarValue(e.target.value)
   }
@@ -71,19 +68,17 @@ export default function VectorCalculator() {
   const clearVectors = () => {
     setVectorA(createEmptyVector(vectorSize))
     setVectorB(createEmptyVector(vectorSize))
-    setAngleA("")
-    setAngleB("")
     setScalarValue("")
     setResult(null)
     setCalculationSteps([])
     setShowResult(false)
     setVectorAValues(null)
     setVectorBValues(null)
+    setVisualizationVectors(undefined)
   }
 
   const handleCalculate = () => {
-    // Implementación pendiente
-    // Por ahora, solo mostraremos los vectores ingresados
+    // Convertir strings a números para vectorA y vectorB
     const numVectorA = vectorA.map(value => {
       const num = parseFloat(value)
       return isNaN(num) ? 0 : num
@@ -94,66 +89,89 @@ export default function VectorCalculator() {
       return isNaN(num) ? 0 : num
     })
     
-    setVectorAValues(numVectorA)
-    setVectorBValues(numVectorB)
+    // Convertir escalar
+    const numScalar = parseFloat(scalarValue) || 0
     
-    // En una implementación real, aquí calcularíamos el resultado
-    // Por ahora, solo estableceremos un resultado de ejemplo
-    // Ejemplo para visualizar - en una implementación real esto vendría de los cálculos
-    switch(selectedOperation) {
-      case "magnitude":
-        // Cálculo de magnitud: raíz cuadrada de la suma de los cuadrados
-        {
-          const sumOfSquares = numVectorA.reduce((sum, component) => sum + component * component, 0)
-          setResult(Math.sqrt(sumOfSquares))
-        }
-        break;
-      case "normalize":
-        // Cálculo de vector unitario: vector dividido por su magnitud
-        {
-          const sumOfSquares = numVectorA.reduce((sum, component) => sum + component * component, 0)
-          const magnitude = Math.sqrt(sumOfSquares)
-          if (magnitude === 0) {
-            setResult(numVectorA) // No se puede normalizar un vector cero
-          } else {
-            setResult(numVectorA.map(component => component / magnitude))
-          }
-        }
-        break;
-      case "vector_add":
-        // Suma de vectores
-        if (numVectorA.length === numVectorB.length) {
-          setResult(numVectorA.map((component, index) => component + numVectorB[index]))
-        }
-        break;
-      case "vector_subtract":
-        // Resta de vectores
-        if (numVectorA.length === numVectorB.length) {
-          setResult(numVectorA.map((component, index) => component - numVectorB[index]))
-        }
-        break;
-      case "scalar_multiply":
-        // Multiplicación por escalar
-        {
-          const scalar = parseFloat(scalarValue) || 0
-          setResult(numVectorA.map(component => component * scalar))
-        }
-        break;
-      default:
-        // Para otras operaciones, simplemente mostraremos vector A como resultado
-        setResult(numVectorA)
+    // Guardar los valores numéricos para visualización
+    setVectorAValues(numVectorA)
+    
+    if (showVectorBInput) {
+      setVectorBValues(numVectorB)
     }
     
-    setCalculationSteps([
-      `Operación de vectores seleccionada: ${getSelectedOperationLabel()}`,
-      `Vector A: [${numVectorA.join(", ")}]`,
-      showVectorBInput ? `Vector B: [${numVectorB.join(", ")}]` : "",
-      `Ángulo A: ${angleA || "0"}°`,
-      showVectorBInput ? `Ángulo B: ${angleB || "0"}°` : "",
-      showScalarInput ? `Escalar: ${scalarValue || "0"}` : "",
-    ].filter(step => step !== ""))
+    // Declarar variables para los resultados
+    let operationResult: VectorOperationResult | null = null;
     
-    setShowResult(true)
+    // Realizar la operación seleccionada
+    switch(selectedOperation) {
+      case "magnitude":
+        // Cálculo de magnitud usando VectorOperations
+        operationResult = VectorOperations.calculateMagnitude(numVectorA, decimalPlaces);
+        break;
+        
+      case "normalize":
+        // Normalización de vector
+        operationResult = VectorOperations.normalizeVector(numVectorA, decimalPlaces);
+        break;
+        
+      case "vector_angle":
+        // Cálculo del ángulo del vector con el eje X
+        operationResult = VectorOperations.calculateAngle(numVectorA, decimalPlaces);
+        break;
+        
+      case "angle_between":
+        // Cálculo del ángulo entre dos vectores
+        operationResult = VectorOperations.calculateAngleBetween(numVectorA, numVectorB, decimalPlaces);
+        break;
+        
+      case "dot_product":
+        // Producto escalar (producto punto)
+        operationResult = VectorOperations.calculateDotProduct(numVectorA, numVectorB, decimalPlaces);
+        break;
+        
+      case "cross_product":
+        // Producto vectorial (producto cruz)
+        operationResult = VectorOperations.calculateCrossProduct(numVectorA, numVectorB, decimalPlaces);
+        break;
+        
+      case "projection":
+        // Proyección de un vector sobre otro
+        operationResult = VectorOperations.calculateProjection(numVectorA, numVectorB, decimalPlaces);
+        break;
+        
+      case "scalar_multiply":
+        // Multiplicación por escalar
+        operationResult = VectorOperations.scalarMultiply(numVectorA, numScalar, decimalPlaces);
+        break;
+        
+      case "vector_add":
+        // Suma de vectores
+        operationResult = VectorOperations.addVectors(numVectorA, numVectorB, decimalPlaces);
+        break;
+        
+      case "vector_subtract":
+        // Resta de vectores
+        operationResult = VectorOperations.subtractVectors(numVectorA, numVectorB, decimalPlaces);
+        break;
+        
+      default:
+        // Para otras operaciones aún no implementadas, mostramos mensaje informativo
+        operationResult = {
+          result: numVectorA,
+          steps: [
+            `Operación "${selectedOperation}" aún no implementada completamente.`,
+            `Se muestra el vector A como resultado provisional.`
+          ]
+        };
+    }
+    
+    // Actualizar el estado con los resultados
+    if (operationResult) {
+      setResult(operationResult.result);
+      setCalculationSteps(operationResult.steps);
+      setVisualizationVectors(operationResult.vectors);
+      setShowResult(true);
+    }
   }
 
   const handleOperationSelect = (operation: VectorOperationType) => {
@@ -173,6 +191,7 @@ export default function VectorCalculator() {
     setShowResult(false)
     setCalculationSteps([])
     setResult(null)
+    setVisualizationVectors(undefined)
   }
 
   const getSelectedOperationLabel = () => {
@@ -255,10 +274,6 @@ export default function VectorCalculator() {
                   onInputChange={handleVectorAInputChange}
                   label={`Vector A (${vectorSize}D)`}
                 />
-                <AngleInput
-                  angle={angleA}
-                  onAngleChange={handleAngleAChange}
-                />
               </div>
             </motion.div>
 
@@ -277,10 +292,6 @@ export default function VectorCalculator() {
                     vector={vectorB}
                     onInputChange={handleVectorBInputChange}
                     label={`Vector B (${vectorSize}D)`}
-                  />
-                  <AngleInput
-                    angle={angleB}
-                    onAngleChange={handleAngleBChange}
                   />
                 </div>
               </motion.div>
@@ -338,6 +349,7 @@ export default function VectorCalculator() {
                   decimalPlaces={decimalPlaces}
                   vectorA={vectorAValues ?? undefined}
                   vectorB={vectorBValues ?? undefined}
+                  visualizationVectors={visualizationVectors}
                 />
               </motion.div>
             )}
