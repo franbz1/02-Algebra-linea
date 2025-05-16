@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from "react"
 import { MatrixInput } from "./MatrixInput"
 import { MatrixActions } from "./MatrixActions"
 import { MatrixResult } from "./MatrixResult"
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Menu, Calculator, X } from "lucide-react"
+import { Menu, Calculator } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { MatrixOperations } from "../lib/MatrixOperations"
 import { MENU_OPTIONS, OperationType, OperationOption } from "../config/operations"
@@ -19,12 +19,12 @@ import { VectorInput } from "./VectorInput"
 
 // Definir qué operaciones necesitan matriz cuadrada
 const SQUARE_OPERATIONS: OperationType[] = [
-    "determinant", 
-    "determinant_sarrus", 
-    "adjoint", 
-    "inverse", 
-    "cramer", 
-    "solve_inverse" // Añadir aquí
+  "determinant",
+  "determinant_sarrus",
+  "adjoint",
+  "inverse",
+  "cramer",
+  "solve_inverse" // Añadir aquí
 ];
 
 // Extender opciones con info de cuadrada y dos matrices
@@ -45,12 +45,12 @@ const EXTENDED_MENU_OPTIONS: ExtendedOperationOption[] = MENU_OPTIONS.map(opt =>
 
 // Helper para crear matriz vacía
 const createEmptyMatrix = (rows: number, cols: number): string[][] => {
-    return Array(rows).fill(Array(cols).fill(""));
+  return Array(rows).fill(Array(cols).fill(""));
 };
 
 // Helper para crear vector vacío
 const createEmptyVector = (size: number): string[] => {
-    return Array(size).fill("");
+  return Array(size).fill("");
 };
 
 export default function Matriz() {
@@ -68,7 +68,6 @@ export default function Matriz() {
   const [calculationSteps, setCalculationSteps] = useState<string[]>([])
   const [showResult, setShowResult] = useState(false)
   const [selectedOperation, setSelectedOperation] = useState<OperationType>("determinant")
-  const [isResizing, setIsResizing] = useState(false)
   const [showMatrixBInput, setShowMatrixBInput] = useState(false)
   const [showVectorBInput, setShowVectorBInput] = useState(false)
   const [decimalPlaces, setDecimalPlaces] = useState(2)
@@ -76,12 +75,12 @@ export default function Matriz() {
   const [syncBRowsToACols, setSyncBRowsToACols] = useState(false)
 
   const handleSizeChange = useCallback((newSize: number) => {
-    if(newSize >=1 && newSize <= 5) {
-        setRowsA(newSize)
-        setColsA(newSize)
-        if (showVectorBInput) {
-            setVectorB(createEmptyVector(newSize))
-        }
+    if (newSize >= 1 && newSize <= 5) {
+      setRowsA(newSize)
+      setColsA(newSize)
+      if (showVectorBInput) {
+        setVectorB(createEmptyVector(newSize))
+      }
     }
   }, [showVectorBInput])
 
@@ -96,7 +95,7 @@ export default function Matriz() {
 
   const handleRowsBChange = useCallback((newRows: number) => {
     if (!syncBRowsToACols) {
-        setRowsB(newRows)
+      setRowsB(newRows)
     }
   }, [syncBRowsToACols])
 
@@ -125,8 +124,8 @@ export default function Matriz() {
   }
 
   const handleVectorBInputChange = (index: number, value: string) => {
-    setVectorB(prevVector => 
-        prevVector.map((v, i) => (i === index ? value : v))
+    setVectorB(prevVector =>
+      prevVector.map((v, i) => (i === index ? value : v))
     )
   }
 
@@ -144,70 +143,70 @@ export default function Matriz() {
 
   const handleCalculate = () => {
     const operationConfig = EXTENDED_MENU_OPTIONS.find(opt => opt.value === selectedOperation)
-    
+
     if (!operationConfig) {
-        console.error(`Configuración no encontrada para la operación: ${selectedOperation}`)
-        setCalculationSteps([`Error interno: Operación desconocida.`])
-        setShowResult(true)
-        setResult(null)
-        return
+      console.error(`Configuración no encontrada para la operación: ${selectedOperation}`)
+      setCalculationSteps([`Error interno: Operación desconocida.`])
+      setShowResult(true)
+      setResult(null)
+      return
     }
 
     const N = rowsA
     if (operationConfig.requiresSquare && N !== colsA) {
-        setCalculationSteps([`Error: La operación '${operationConfig.label}' requiere una matriz cuadrada (dimensiones A: ${rowsA}x${colsA}).`])
-        setShowResult(true)
-        setResult(null)
-        return
+      setCalculationSteps([`Error: La operación '${operationConfig.label}' requiere una matriz cuadrada (dimensiones A: ${rowsA}x${colsA}).`])
+      setShowResult(true)
+      setResult(null)
+      return
     }
     if (selectedOperation === 'determinant_sarrus' && N !== 3) {
-         setCalculationSteps([`Error: La operación '${operationConfig.label}' solo aplica a matrices 3x3 (dimensiones A: ${rowsA}x${colsA}).`])
-         setShowResult(true)
-         setResult(null)
-         return
+      setCalculationSteps([`Error: La operación '${operationConfig.label}' solo aplica a matrices 3x3 (dimensiones A: ${rowsA}x${colsA}).`])
+      setShowResult(true)
+      setResult(null)
+      return
     }
     if (selectedOperation === 'multiply' && colsA !== rowsB) {
-         setCalculationSteps([`Error: Dimensiones incompatibles para multiplicación. Columnas de A (${colsA}) deben ser igual a filas de B (${rowsB}).`])
-         setShowResult(true)
-         setResult(null)
-         return
+      setCalculationSteps([`Error: Dimensiones incompatibles para multiplicación. Columnas de A (${colsA}) deben ser igual a filas de B (${rowsB}).`])
+      setShowResult(true)
+      setResult(null)
+      return
     }
     if (selectedOperation === 'cramer' && vectorB.length !== N) {
-        setCalculationSteps([`Error: Vector B debe tener ${N} elementos (dimensiones A: ${rowsA}x${colsA}).`])
-        setShowResult(true)
-        setResult(null)
-        return
+      setCalculationSteps([`Error: Vector B debe tener ${N} elementos (dimensiones A: ${rowsA}x${colsA}).`])
+      setShowResult(true)
+      setResult(null)
+      return
     }
     if (selectedOperation === 'solve_inverse' && vectorB.length !== N) {
-        setCalculationSteps([`Error: Vector B debe tener ${N} elementos (dimensiones A: ${rowsA}x${colsA}).`])
-        setShowResult(true)
-        setResult(null)
-        return
+      setCalculationSteps([`Error: Vector B debe tener ${N} elementos (dimensiones A: ${rowsA}x${colsA}).`])
+      setShowResult(true)
+      setResult(null)
+      return
     }
 
-    const numericMatrix = matrix.map(row => 
+    const numericMatrix = matrix.map(row =>
       row.map(cell => {
         const num = parseFloat(cell)
         return isNaN(num) ? 0 : num
       })
     )
-    
+
     let numericMatrixB: number[][] | null = null
     if (operationConfig.requiresTwoMatrices) {
-        numericMatrixB = matrixB.map(row => 
-          row.map(cell => {
-            const num = parseFloat(cell)
-            return isNaN(num) ? 0 : num
-          })
-        )
+      numericMatrixB = matrixB.map(row =>
+        row.map(cell => {
+          const num = parseFloat(cell)
+          return isNaN(num) ? 0 : num
+        })
+      )
     }
 
     let numericVectorB: number[] | null = null
     if (selectedOperation === 'cramer' || selectedOperation === 'solve_inverse') {
-        numericVectorB = vectorB.map(cell => {
-            const num = parseFloat(cell)
-            return isNaN(num) ? 0 : num
-        })
+      numericVectorB = vectorB.map(cell => {
+        const num = parseFloat(cell)
+        return isNaN(num) ? 0 : num
+      })
     }
 
     let operationResult: { result: number | number[][] | number[]; steps: string[] } | null = null
@@ -218,7 +217,7 @@ export default function Matriz() {
     try {
       switch (selectedOperation) {
         case "determinant":
-          if (numericMatrix.length !== numericMatrix[0]?.length) {
+          { if (numericMatrix.length !== numericMatrix[0]?.length) {
             console.error("La matriz debe ser cuadrada para calcular el determinante.")
             setCalculationSteps(["Error: La matriz debe ser cuadrada para calcular el determinante."])
             setShowResult(true)
@@ -228,16 +227,16 @@ export default function Matriz() {
           }
           const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix, decimalPlaces)
           operationResult = { result: determinant, steps }
-          break
+          break }
         case "determinant_sarrus":
-          const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix, decimalPlaces)
+          { const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix, decimalPlaces)
           if (isNaN(sarrusResult.determinant)) {
             setCalculationSteps(sarrusResult.steps)
             operationResult = null
           } else {
             operationResult = { result: sarrusResult.determinant, steps: sarrusResult.steps }
           }
-          break
+          break }
         case "multiply":
           if (!numericMatrixB) {
             console.error("Error interno: Matriz B no está disponible para multiplicación.")
@@ -254,32 +253,32 @@ export default function Matriz() {
           }
           break
         case "transpose":
-          const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix, decimalPlaces)
+          { const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix, decimalPlaces)
           if (transposeResult.result === null) {
             setCalculationSteps(transposeResult.steps)
             operationResult = null
           } else {
             operationResult = { result: transposeResult.result, steps: transposeResult.steps }
           }
-          break
+          break }
         case "adjoint":
-          const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix, decimalPlaces)
+          { const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix, decimalPlaces)
           if (adjointResult.result === null) {
             setCalculationSteps(adjointResult.steps)
             operationResult = null
           } else {
             operationResult = { result: adjointResult.result, steps: adjointResult.steps }
           }
-          break
+          break }
         case "inverse":
-          const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix, decimalPlaces)
+          { const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix, decimalPlaces)
           if (inverseResult.result === null) {
             setCalculationSteps(inverseResult.steps)
             operationResult = null
           } else {
             operationResult = { result: inverseResult.result, steps: inverseResult.steps }
           }
-          break
+          break }
         case "sum":
         case "subtract":
           console.warn(`Operación '${selectedOperation}' no implementada aún.`)
@@ -342,10 +341,10 @@ export default function Matriz() {
   const handleOperationSelect = (operation: OperationType) => {
     setSelectedOperation(operation)
     const config = EXTENDED_MENU_OPTIONS.find(opt => opt.value === operation)
-    
+
     if (!config) {
-        console.error(`Configuración no encontrada para la operación seleccionada: ${operation}`)
-        return 
+      console.error(`Configuración no encontrada para la operación seleccionada: ${operation}`)
+      return
     }
 
     const needsSquare = config.requiresSquare ?? false
@@ -363,17 +362,17 @@ export default function Matriz() {
 
     let currentN = rowsA
     if (needsSquare) {
-        if(rowsA !== colsA) {
-           currentN = Math.max(rowsA, colsA, 2) 
-           setRowsA(currentN)
-           setColsA(currentN)
-        } 
-        if(needsVectorB && vectorB.length !== currentN) {
-           setVectorB(createEmptyVector(currentN))
-        }        
+      if (rowsA !== colsA) {
+        currentN = Math.max(rowsA, colsA, 2)
+        setRowsA(currentN)
+        setColsA(currentN)
+      }
+      if (needsVectorB && vectorB.length !== currentN) {
+        setVectorB(createEmptyVector(currentN))
+      }
     } else if (isMultiply) {
-        setRowsB(colsA)
-    } 
+      setRowsB(colsA)
+    }
   }
 
   const getSelectedOperationLabel = () => {
@@ -383,7 +382,7 @@ export default function Matriz() {
   useEffect(() => {
     setMatrix(createEmptyMatrix(rowsA, colsA))
     if (showVectorBInput) {
-        setVectorB(createEmptyVector(rowsA))
+      setVectorB(createEmptyVector(rowsA))
     }
   }, [rowsA, colsA, showVectorBInput])
 
@@ -393,7 +392,7 @@ export default function Matriz() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 bg-gradient-to-b from-slate-50 to-slate-100">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -406,7 +405,7 @@ export default function Matriz() {
               Calculadora de matrices
             </h1>
           </div>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" className="cursor-pointer h-8 w-8 sm:h-9 sm:w-9 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">
@@ -416,7 +415,7 @@ export default function Matriz() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 max-h-72 overflow-y-auto">
               {EXTENDED_MENU_OPTIONS.map((option) => (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   key={option.value}
                   onSelect={() => handleOperationSelect(option.value)}
                   className="flex flex-col items-start py-2 cursor-pointer focus:bg-indigo-50"
@@ -435,7 +434,7 @@ export default function Matriz() {
               <span className="text-sm text-slate-600">Operación:</span>
               <span className="text-sm font-medium text-indigo-700">{getSelectedOperationLabel()}</span>
             </div>
-            <motion.div 
+            <motion.div
               key={rowsA}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -445,7 +444,7 @@ export default function Matriz() {
               {rowsA}×{colsA}
             </motion.div>
             {showMatrixBInput && (
-              <motion.div 
+              <motion.div
                 key={rowsB}
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -456,7 +455,7 @@ export default function Matriz() {
               </motion.div>
             )}
             {showVectorBInput && (
-              <motion.div 
+              <motion.div
                 key={`vector-b-${rowsA}`}
                 layout
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -472,93 +471,93 @@ export default function Matriz() {
 
           <div className={`grid gap-4 ${showMatrixBInput || showVectorBInput ? 'grid-cols-2' : 'grid-cols-1'}`}>
             <div className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-center gap-4">
-                <span className="font-medium text-slate-700 self-center">
-                    {forceSquare ? 'Tamaño N:' : 'Matriz A:'}
-                </span>
-                 {forceSquare ? (
-                    <MatrixDimensionControl 
-                        label="N" 
-                        value={rowsA}
-                        onChange={handleSizeChange} 
-                        minValue={2}
-                    />
-                 ) : (<>
-                    <MatrixDimensionControl 
-                        label="Filas A" 
-                        value={rowsA} 
-                        onChange={handleRowsAChangeNonSquare} 
-                    />
-                    <MatrixDimensionControl 
-                        label="Columnas A" 
-                        value={colsA} 
-                        onChange={handleColsAChangeNonSquare} 
-                     />
-                 </>)} 
+              <span className="font-medium text-slate-700 self-center">
+                {forceSquare ? 'Tamaño N:' : 'Matriz A:'}
+              </span>
+              {forceSquare ? (
+                <MatrixDimensionControl
+                  label="N"
+                  value={rowsA}
+                  onChange={handleSizeChange}
+                  minValue={2}
+                />
+              ) : (<>
+                <MatrixDimensionControl
+                  label="Filas A"
+                  value={rowsA}
+                  onChange={handleRowsAChangeNonSquare}
+                />
+                <MatrixDimensionControl
+                  label="Columnas A"
+                  value={colsA}
+                  onChange={handleColsAChangeNonSquare}
+                />
+              </>)}
             </div>
             {showMatrixBInput && !forceSquare && (
-                <div className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-center gap-4">
-                    <span className="font-medium text-slate-700 self-center">Matriz B:</span>
-                     <MatrixDimensionControl label="Filas B" value={rowsB} onChange={handleRowsBChange} isDisabled={syncBRowsToACols} />
-                     <MatrixDimensionControl label="Columnas B" value={colsB} onChange={handleColsBChange} />
-                </div>
+              <div className="bg-slate-50 p-3 rounded-md border border-slate-200 flex justify-center gap-4">
+                <span className="font-medium text-slate-700 self-center">Matriz B:</span>
+                <MatrixDimensionControl label="Filas B" value={rowsB} onChange={handleRowsBChange} isDisabled={syncBRowsToACols} />
+                <MatrixDimensionControl label="Columnas B" value={colsB} onChange={handleColsBChange} />
+              </div>
             )}
           </div>
 
           <div className={`flex flex-wrap justify-center items-center gap-4 md:gap-6 ${(showMatrixBInput || showVectorBInput) ? 'md:flex-nowrap' : ''}`}>
-          <motion.div
-              key={`matrix-a-${rowsA}`} 
-              layout 
+            <motion.div
+              key={`matrix-a-${rowsA}`}
+              layout
               className="w-full md:w-auto"
-          >
-            <MatrixInput
-              matrix={matrix}
-              onInputChange={handleInputChange}
-                   label={(selectedOperation === 'cramer' || selectedOperation === 'solve_inverse') ? 'Matriz de Coeficientes (A)' : `Matriz A${forceSquare ? ` (${rowsA}×${rowsA})` : ` (${rowsA}×${colsA})`}`} 
-            />
-          </motion.div>
+            >
+              <MatrixInput
+                matrix={matrix}
+                onInputChange={handleInputChange}
+                label={(selectedOperation === 'cramer' || selectedOperation === 'solve_inverse') ? 'Matriz de Coeficientes (A)' : `Matriz A${forceSquare ? ` (${rowsA}×${rowsA})` : ` (${rowsA}×${colsA})`}`}
+              />
+            </motion.div>
 
             {(selectedOperation === 'cramer' || selectedOperation === 'solve_inverse') && (
-                <motion.div 
-                    key="cramer-separator" 
-                    initial={{ opacity: 0, scale: 0.5 }} 
-                    animate={{ opacity: 1, scale: 1 }} 
-                    className="text-3xl font-bold text-slate-500 px-2"
-                 >
-                   =
-                </motion.div>
+              <motion.div
+                key="cramer-separator"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-3xl font-bold text-slate-500 px-2"
+              >
+                =
+              </motion.div>
             )}
 
-            <AnimatePresence>{showMatrixBInput && !showVectorBInput && (<motion.div 
-                key={`matrix-b-${rowsB}`} 
-                layout 
-                initial={{ opacity: 0, scale: 0.8}} 
-                animate={{ opacity: 1, scale: 1}} 
-                exit={{ opacity: 0, scale: 0.8}} 
-                transition={{ type: "spring", stiffness: 400, damping: 25 }} 
-                className="w-full md:w-auto"
-            > 
-                <MatrixInput matrix={matrixB} onInputChange={handleInputChangeB} label={`Matriz B (${rowsB}x${colsB})`} />
+            <AnimatePresence>{showMatrixBInput && !showVectorBInput && (<motion.div
+              key={`matrix-b-${rowsB}`}
+              layout
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              className="w-full md:w-auto"
+            >
+              <MatrixInput matrix={matrixB} onInputChange={handleInputChangeB} label={`Matriz B (${rowsB}x${colsB})`} />
             </motion.div>)}</AnimatePresence>
-            
-            <AnimatePresence>{showVectorBInput && (<motion.div 
-                key={`vector-b-${rowsA}`} 
-                layout 
-                initial={{ opacity: 0, scale: 0.8}} 
-                animate={{ opacity: 1, scale: 1}} 
-                exit={{ opacity: 0, scale: 0.8}} 
-                transition={{ type: "spring", stiffness: 400, damping: 25 }} 
-                className="w-full md:w-auto"
-            > 
-                <VectorInput 
-                    vector={vectorB} 
-                    onInputChange={handleVectorBInputChange} 
-                    label={`Vector de Resultados (B)`} 
-                />
+
+            <AnimatePresence>{showVectorBInput && (<motion.div
+              key={`vector-b-${rowsA}`}
+              layout
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              className="w-full md:w-auto"
+            >
+              <VectorInput
+                vector={vectorB}
+                onInputChange={handleVectorBInputChange}
+                label={`Vector de Resultados (B)`}
+              />
             </motion.div>)}</AnimatePresence>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-            <DecimalPlacesControl 
+            <DecimalPlacesControl
               value={decimalPlaces}
               onChange={setDecimalPlaces}
             />
@@ -570,7 +569,7 @@ export default function Matriz() {
 
           <AnimatePresence>
             {showResult && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
