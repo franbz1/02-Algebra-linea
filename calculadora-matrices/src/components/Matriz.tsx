@@ -434,39 +434,6 @@ export default function Matriz() {
               <span className="text-sm text-slate-600">Operación:</span>
               <span className="text-sm font-medium text-indigo-700">{getSelectedOperationLabel()}</span>
             </div>
-            <motion.div
-              key={rowsA}
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              className="text-xs text-indigo-700 bg-white px-2 py-1 rounded-md border border-indigo-200"
-            >
-              {rowsA}×{colsA}
-            </motion.div>
-            {showMatrixBInput && (
-              <motion.div
-                key={rowsB}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                className="text-xs text-indigo-700 bg-white px-2 py-1 rounded-md border border-indigo-200"
-              >
-                {rowsB}×{colsB}
-              </motion.div>
-            )}
-            {showVectorBInput && (
-              <motion.div
-                key={`vector-b-${rowsA}`}
-                layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                className="text-xs text-indigo-700 bg-white px-2 py-1 rounded-md border border-indigo-200"
-              >
-                {rowsA}×1
-              </motion.div>
-            )}
           </div>
 
           <div className={`grid gap-4 ${showMatrixBInput || showVectorBInput ? 'grid-cols-2' : 'grid-cols-1'}`}>
