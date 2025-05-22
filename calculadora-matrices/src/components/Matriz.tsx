@@ -217,26 +217,30 @@ export default function Matriz() {
     try {
       switch (selectedOperation) {
         case "determinant":
-          { if (numericMatrix.length !== numericMatrix[0]?.length) {
-            console.error("La matriz debe ser cuadrada para calcular el determinante.")
-            setCalculationSteps(["Error: La matriz debe ser cuadrada para calcular el determinante."])
-            setShowResult(true)
-            setResult(null)
-            setMatrixCalculated(numericMatrix)
-            return
+          {
+            if (numericMatrix.length !== numericMatrix[0]?.length) {
+              console.error("La matriz debe ser cuadrada para calcular el determinante.")
+              setCalculationSteps(["Error: La matriz debe ser cuadrada para calcular el determinante."])
+              setShowResult(true)
+              setResult(null)
+              setMatrixCalculated(numericMatrix)
+              return
+            }
+            const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix, decimalPlaces)
+            operationResult = { result: determinant, steps }
+            break
           }
-          const { determinant, steps } = MatrixOperations.calculateDeterminantWithSteps(numericMatrix, decimalPlaces)
-          operationResult = { result: determinant, steps }
-          break }
         case "determinant_sarrus":
-          { const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix, decimalPlaces)
-          if (isNaN(sarrusResult.determinant)) {
-            setCalculationSteps(sarrusResult.steps)
-            operationResult = null
-          } else {
-            operationResult = { result: sarrusResult.determinant, steps: sarrusResult.steps }
+          {
+            const sarrusResult = MatrixOperations.calculateDeterminantBySarrusWithSteps(numericMatrix, decimalPlaces)
+            if (isNaN(sarrusResult.determinant)) {
+              setCalculationSteps(sarrusResult.steps)
+              operationResult = null
+            } else {
+              operationResult = { result: sarrusResult.determinant, steps: sarrusResult.steps }
+            }
+            break
           }
-          break }
         case "multiply":
           if (!numericMatrixB) {
             console.error("Error interno: Matriz B no está disponible para multiplicación.")
@@ -253,37 +257,67 @@ export default function Matriz() {
           }
           break
         case "transpose":
-          { const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix, decimalPlaces)
-          if (transposeResult.result === null) {
-            setCalculationSteps(transposeResult.steps)
-            operationResult = null
-          } else {
-            operationResult = { result: transposeResult.result, steps: transposeResult.steps }
+          {
+            const transposeResult = MatrixOperations.transposeMatrixWithSteps(numericMatrix, decimalPlaces)
+            if (transposeResult.result === null) {
+              setCalculationSteps(transposeResult.steps)
+              operationResult = null
+            } else {
+              operationResult = { result: transposeResult.result, steps: transposeResult.steps }
+            }
+            break
           }
-          break }
         case "adjoint":
-          { const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix, decimalPlaces)
-          if (adjointResult.result === null) {
-            setCalculationSteps(adjointResult.steps)
-            operationResult = null
-          } else {
-            operationResult = { result: adjointResult.result, steps: adjointResult.steps }
+          {
+            const adjointResult = MatrixOperations.calculateAdjointWithSteps(numericMatrix, decimalPlaces)
+            if (adjointResult.result === null) {
+              setCalculationSteps(adjointResult.steps)
+              operationResult = null
+            } else {
+              operationResult = { result: adjointResult.result, steps: adjointResult.steps }
+            }
+            break
           }
-          break }
         case "inverse":
-          { const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix, decimalPlaces)
-          if (inverseResult.result === null) {
-            setCalculationSteps(inverseResult.steps)
+          {
+            const inverseResult = MatrixOperations.calculateInverseWithSteps(numericMatrix, decimalPlaces)
+            if (inverseResult.result === null) {
+              setCalculationSteps(inverseResult.steps)
+              operationResult = null
+            } else {
+              operationResult = { result: inverseResult.result, steps: inverseResult.steps }
+            }
+            break
+          }
+        case "sum":
+          if (!numericMatrixB) {
+            console.error("Error interno: Matriz B no está disponible para suma.")
+            setCalculationSteps(["Error interno: Matriz B requerida."])
             operationResult = null
           } else {
-            operationResult = { result: inverseResult.result, steps: inverseResult.steps }
+            const sumResult = MatrixOperations.sumMatricesWithSteps(numericMatrix, numericMatrixB, decimalPlaces)
+            if (sumResult.result === null) {
+              setCalculationSteps(sumResult.steps)
+              operationResult = null
+            } else {
+              operationResult = { result: sumResult.result, steps: sumResult.steps }
+            }
           }
-          break }
-        case "sum":
+          break
         case "subtract":
-          console.warn(`Operación '${selectedOperation}' no implementada aún.`)
-          setCalculationSteps(["Operación no implementada."])
-          operationResult = null
+          if (!numericMatrixB) {
+            console.error("Error interno: Matriz B no está disponible para resta.")
+            setCalculationSteps(["Error interno: Matriz B requerida."])
+            operationResult = null
+          } else {
+            const subtractResult = MatrixOperations.subtractMatricesWithSteps(numericMatrix, numericMatrixB, decimalPlaces)
+            if (subtractResult.result === null) {
+              setCalculationSteps(subtractResult.steps)
+              operationResult = null
+            } else {
+              operationResult = { result: subtractResult.result, steps: subtractResult.steps }
+            }
+          }
           break
         case "cramer":
           if (!numericVectorB) {

@@ -1048,10 +1048,89 @@ export class MatrixOperations {
     )
   }
 
-  // --- Aquí se añadirían otras funciones de cálculo ---
-  // static sumMatrices(matrixA: number[][], matrixB: number[][]): { result: number[][]; steps: string[] } { ... }
-  // static subtractMatrices(matrixA: number[][], matrixB: number[][]): { result: number[][]; steps: string[] } { ... }
-  // static multiplyMatrices(matrixA: number[][], matrixB: number[][]): { result: number[][]; steps: string[] } { ... }
-  // static inverseMatrix(matrix: number[][]): { result: number[][]; steps: string[] } { ... }
-  // static solveByCramer(matrix: number[][], vector: number[]): { result: number[]; steps: string[] } { ... }
+
+  /**
+   * Suma dos matrices
+   * @param matrixA Matriz A
+   * @param matrixB Matriz B
+   * @param decimalPlaces Precisión para los pasos
+   * @returns Objeto con el resultado de la suma y los pasos, o null y error
+   */
+  static sumMatricesWithSteps(
+    matrixA: number[][],
+    matrixB: number[][],
+    decimalPlaces: number = 2
+  ): { result: number[][] | null; steps: string[] } {
+    const steps: string[] = []
+    const n = matrixA.length
+    const m = matrixA[0].length
+
+    if (matrixB.length !== n || matrixB[0].length !== m) {
+      steps.push('Error: Las matrices deben tener las mismas dimensiones.')
+      return { result: null, steps }
+    }
+
+    const resultMatrix: number[][] = Array.from({ length: n }, () =>
+      Array(m).fill(0)
+    )
+
+    for (let i = 0; i < n; i++) {
+      steps.push(`Sumando fila ${i + 1}:`)
+      for (let j = 0; j < m; j++) {
+        steps.push(`Sumando elementos en posición [${i},${j}]`)
+        steps.push(`A[${i},${j}] = ${formatNumberForSteps(matrixA[i][j], decimalPlaces)}`)
+        steps.push(`B[${i},${j}] = ${formatNumberForSteps(matrixB[i][j], decimalPlaces)}`)
+        resultMatrix[i][j] = matrixA[i][j] + matrixB[i][j]
+        steps.push(`Resultado: ${formatNumberForSteps(resultMatrix[i][j], decimalPlaces)}`)
+      }
+    }
+
+    steps.push('Suma de matrices:')
+    steps.push(this.matrixToString(resultMatrix, decimalPlaces))
+
+    return { result: resultMatrix, steps }
+  }
+
+  /**
+   * Resta dos matrices
+   * @param matrixA Matriz A
+   * @param matrixB Matriz B
+   * @param decimalPlaces Precisión para los pasos
+   * @returns Objeto con el resultado de la resta y los pasos, o null y error
+   */
+  static subtractMatricesWithSteps(
+    matrixA: number[][],
+    matrixB: number[][],
+    decimalPlaces: number = 2
+  ): { result: number[][] | null; steps: string[] } {
+    const steps: string[] = []
+    const n = matrixA.length
+    const m = matrixA[0].length
+
+    if (matrixB.length !== n || matrixB[0].length !== m) {
+      steps.push('Error: Las matrices deben tener las mismas dimensiones.')
+      return { result: null, steps }
+    }
+    
+    const resultMatrix: number[][] = Array.from({ length: n }, () =>
+      Array(m).fill(0)
+    )
+
+    for (let i = 0; i < n; i++) {
+      steps.push(`Restando fila ${i + 1}:`)
+      for (let j = 0; j < m; j++) {
+        steps.push(`Restando elementos en posición [${i},${j}]`)
+        steps.push(`A[${i},${j}] = ${formatNumberForSteps(matrixA[i][j], decimalPlaces)}`)
+        steps.push(`B[${i},${j}] = ${formatNumberForSteps(matrixB[i][j], decimalPlaces)}`)
+        resultMatrix[i][j] = matrixA[i][j] - matrixB[i][j]
+        steps.push(`Resultado: ${formatNumberForSteps(resultMatrix[i][j], decimalPlaces)}`)
+      }
+    }
+
+    steps.push('Resta de matrices:')
+    steps.push(this.matrixToString(resultMatrix, decimalPlaces))
+
+    return { result: resultMatrix, steps }
+  }
+
 }
