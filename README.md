@@ -1,5 +1,7 @@
 # Calculadora de Matrices y Vectores
 
+![image](https://github.com/user-attachments/assets/b4ffbc2f-5c3a-4677-9be3-9ab82e78a91f)
+
 ## Descripción del Proyecto
 
 Esta aplicación web es una herramienta educativa que proporciona dos calculadoras: una para matrices y otra para vectores. Permite a los usuarios realizar diversas operaciones matemáticas y visualizar los resultados de manera interactiva, mostrando los pasos detallados para facilitar la comprensión de los conceptos subyacentes.
